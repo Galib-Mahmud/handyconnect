@@ -1,0 +1,38 @@
+name: handyConnect
+description: "A new Flutter project."
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.1
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons:
+  flutter_screenutil:
+  get:
+  google_fonts:
+  image_picker:
+  shared_preferences:
+  web_socket_channel:
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+
+  flutter_lints: ^6.0.0
+
+
+flutter:
+
+  uses-material-design: true
+
+
+  assets:
+    - assets/images/auth/
+    - assets/images/splash/
+    - assets/icons/
+    - assets/images/profile/
+    - assets/images/professional/
+
+
