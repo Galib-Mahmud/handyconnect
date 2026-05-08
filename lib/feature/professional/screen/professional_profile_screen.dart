@@ -1,20 +1,17 @@
+// lib/features/professional/profile/view/professional_profile_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-
-import '../controller/professional_profile_controller.dart';
-
-
-
-
+import 'package:handyConnect/feature/professional/controller/professional_home_controller.dart';
+import 'package:handyConnect/route/route_name.dart';
 
 class ProfessionalProfileScreen extends StatelessWidget {
   const ProfessionalProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final c = Get.put(ProfessionalProfileController());
+    final c = Get.find<ProfessionalHomeController>();
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -22,46 +19,62 @@ class ProfessionalProfileScreen extends StatelessWidget {
         child: Column(
           children: [
             SizedBox(height: 16.h),
-            _buildHeader(),
+            _Header(),
             Divider(height: 20.h, color: const Color(0xFFEEEEEE)),
             Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 20.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 4.h),
-                    _buildProfileCard(c),
-                    SizedBox(height: 16.h),
-                    _buildStatsRow(c),
-                    SizedBox(height: 24.h),
-                    _buildVerificationsSection(c),
-                    SizedBox(height: 24.h),
-                    _buildRecentReviews(c),
-                    SizedBox(height: 32.h),
-                  ],
-                ),
-              ),
+              child: Obx(() {
+                if (c.isLoading.value) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                        color: Color(0xFFF8C106)),
+                  );
+                }
+                return SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: 4.h),
+                      _ProfileCard(c: c),
+                      SizedBox(height: 16.h),
+                      _StatsRow(c: c),
+                      SizedBox(height: 24.h),
+                      _SubscriptionCard(),   // ← NEW
+                      SizedBox(height: 24.h),
+                      _VerificationsSection(c: c),
+                      SizedBox(height: 24.h),
+                      _BioSection(c: c),
+                      SizedBox(height: 32.h),
+                    ],
+                  ),
+                );
+              }),
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  // ─────────────────────── Header ────────────────────────────────
-  Widget _buildHeader() {
+// ─────────────────────────────────────────────────────────────────────────────
+// Header
+// ─────────────────────────────────────────────────────────────────────────────
+class _Header extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.w),
       child: Row(
         children: [
           GestureDetector(
             onTap: () => Get.back(),
-            child: Icon(Icons.arrow_back, size: 22.sp, color: const Color(0xFF212121)),
+            child: Icon(Icons.arrow_back,
+                size: 22.sp, color: const Color(0xFF212121)),
           ),
           SizedBox(width: 16.w),
           Text(
-            'Professional',
+            'My Profile',
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w700,
@@ -72,16 +85,27 @@ class ProfessionalProfileScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  // ─────────────────────── Profile Card ──────────────────────────
-  Widget _buildProfileCard(ProfessionalProfileController c) {
+// ─────────────────────────────────────────────────────────────────────────────
+// Profile Card
+// ─────────────────────────────────────────────────────────────────────────────
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({required this.c});
+  final ProfessionalHomeController c;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2)),
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
@@ -90,124 +114,362 @@ class ProfessionalProfileScreen extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(28.r),
-                child: Image.asset(
-                  'assets/images/profile/profile.png',
+                child: c.professionalImage.value.isNotEmpty
+                    ? Image.network(
+                  c.professionalImage.value,
                   width: 54.w,
                   height: 54.w,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 54.w,
-                    height: 54.w,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE0E0E0),
-                      borderRadius: BorderRadius.circular(28.r),
-                    ),
-                    child: Icon(Icons.person, size: 28.sp, color: const Color(0xFF9E9E9E)),
-                  ),
-                ),
+                  errorBuilder: (_, __, ___) =>
+                      _avatarFallback(c.professionalName.value),
+                )
+                    : _avatarFallback(c.professionalName.value),
               ),
               Positioned(
                 bottom: 2,
                 right: 2,
-                child: Container(
+                child: Obx(() => Container(
                   width: 12.w,
                   height: 12.w,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF43A047),
+                    color: c.isOnline.value
+                        ? const Color(0xFF43A047)
+                        : Colors.grey,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
+                    border:
+                    Border.all(color: Colors.white, width: 1.5),
                   ),
-                ),
+                )),
               ),
             ],
           ),
           SizedBox(width: 14.w),
-          Obx(() => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(c.name.value,
-                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700, color: const Color(0xFF212121))),
-              SizedBox(height: 4.h),
-              Text(c.email.value,
-                  style: TextStyle(fontSize: 13.sp, color: const Color(0xFF9E9E9E))),
-            ],
-          )),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        c.professionalName.value,
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF212121),
+                        ),
+                      ),
+                    ),
+                    if (c.isVerified.value)
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 8.w, vertical: 3.h),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(20.r),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.verified,
+                                color: const Color(0xFF43A047),
+                                size: 12.sp),
+                            SizedBox(width: 3.w),
+                            Text(
+                              'Verified',
+                              style: TextStyle(
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF43A047),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  c.professionalEmail.value,
+                  style: TextStyle(
+                      fontSize: 13.sp, color: const Color(0xFF9E9E9E)),
+                ),
+                SizedBox(height: 4.h),
+                Obx(() => Container(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 8.w, vertical: 2.h),
+                  decoration: BoxDecoration(
+                    color: c.isAvailable.value
+                        ? const Color(0xFFE8F5E9)
+                        : const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  child: Text(
+                    c.isAvailable.value
+                        ? 'Available'
+                        : 'Unavailable',
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w500,
+                      color: c.isAvailable.value
+                          ? const Color(0xFF43A047)
+                          : const Color(0xFF9E9E9E),
+                    ),
+                  ),
+                )),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // ─────────────────────── Stats Row ─────────────────────────────
-  Widget _buildStatsRow(ProfessionalProfileController c) {
+  Widget _avatarFallback(String name) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    return Container(
+      width: 54.w,
+      height: 54.w,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F2FD),
+        borderRadius: BorderRadius.circular(28.r),
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: TextStyle(
+              fontSize: 22.sp,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1565C0)),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stats Row
+// ─────────────────────────────────────────────────────────────────────────────
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({required this.c});
+  final ProfessionalHomeController c;
+
+  @override
+  Widget build(BuildContext context) {
     return Obx(() => Row(
       children: [
         Expanded(
-          child: _buildStatCard(
+          child: _StatCard(
             iconWidget: Container(
               width: 36.w,
               height: 36.w,
-              decoration: const BoxDecoration(color: Color(0xFFE3F2FD), shape: BoxShape.circle),
-              child: Icon(Icons.trending_up, color: const Color(0xFF1E88E5), size: 18.sp),
+              decoration: const BoxDecoration(
+                  color: Color(0xFFFFEBEE), shape: BoxShape.circle),
+              child: Icon(Icons.flash_on,
+                  color: const Color(0xFFE53935), size: 18.sp),
             ),
-            value: c.radiusKm.value,
-            label: 'Radius',
+            value: '${c.emergencyCount.value}',
+            label: 'Emergency',
           ),
         ),
         SizedBox(width: 12.w),
         Expanded(
-          child: _buildStatCard(
+          child: _StatCard(
             iconWidget: Container(
               width: 36.w,
               height: 36.w,
-              decoration: const BoxDecoration(color: Color(0xFFE8F5E9), shape: BoxShape.circle),
-              child: Icon(Icons.check_circle_outline, color: const Color(0xFF43A047), size: 18.sp),
+              decoration: const BoxDecoration(
+                  color: Color(0xFFE8F5E9), shape: BoxShape.circle),
+              child: Icon(Icons.check_circle_outline,
+                  color: const Color(0xFF43A047), size: 18.sp),
             ),
-            value: '${c.totalJobs.value}',
+            value: '${c.jobsCount.value}',
             label: 'Jobs',
           ),
         ),
         SizedBox(width: 12.w),
         Expanded(
-          child: _buildStatCard(
+          child: _StatCard(
             iconWidget: Container(
               width: 36.w,
               height: 36.w,
-              decoration: const BoxDecoration(color: Color(0xFFFFF8E1), shape: BoxShape.circle),
-              child: Icon(Icons.star_border, color: const Color(0xFFF8C106), size: 18.sp),
+              decoration: const BoxDecoration(
+                  color: Color(0xFFFFF8E1), shape: BoxShape.circle),
+              child: Icon(Icons.star_border,
+                  color: const Color(0xFFF8C106), size: 18.sp),
             ),
-            value: '${c.rating.value}',
-            label: 'Review',
+            value: c.rating.value.toStringAsFixed(1),
+            label: 'Rating',
+          ),
+        ),
+        SizedBox(width: 12.w),
+        Expanded(
+          child: _StatCard(
+            iconWidget: Container(
+              width: 36.w,
+              height: 36.w,
+              decoration: const BoxDecoration(
+                  color: Color(0xFFE3F2FD), shape: BoxShape.circle),
+              child: Icon(Icons.workspace_premium_outlined,
+                  color: const Color(0xFF1565C0), size: 18.sp),
+            ),
+            value: '${c.certificates.value}',
+            label: 'Certs',
           ),
         ),
       ],
     ));
   }
+}
 
-  Widget _buildStatCard({required Widget iconWidget, required String value, required String label}) {
+class _StatCard extends StatelessWidget {
+  const _StatCard(
+      {required this.iconWidget,
+        required this.value,
+        required this.label});
+  final Widget iconWidget;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 16.h),
+      padding: EdgeInsets.symmetric(vertical: 14.h),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14.r),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
         children: [
           iconWidget,
-          SizedBox(height: 10.h),
+          SizedBox(height: 8.h),
           Text(value,
-              style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.w800, color: const Color(0xFF212121))),
+              style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF212121))),
           SizedBox(height: 2.h),
-          Text(label, style: TextStyle(fontSize: 12.sp, color: const Color(0xFF9E9E9E))),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11.sp, color: const Color(0xFF9E9E9E))),
         ],
       ),
     );
   }
+}
 
-  // ─────────────────────── Verifications ─────────────────────────
-  Widget _buildVerificationsSection(ProfessionalProfileController c) {
+// ─────────────────────────────────────────────────────────────────────────────
+// Subscription Card  ← NEW — fully static, routes to subscription screen
+// ─────────────────────────────────────────────────────────────────────────────
+class _SubscriptionCard extends StatelessWidget {
+  const _SubscriptionCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Get.toNamed(RouteName.subscription), // ← change route name
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(18.w),
+        decoration: BoxDecoration(
+          // Gold gradient background
+          gradient: const LinearGradient(
+            colors: [Color(0xFFF8C106), Color(0xFFFFD54F)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFF8C106).withOpacity(0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Crown icon
+            Container(
+              width: 48.w,
+              height: 48.w,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.25),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.workspace_premium,
+                  color: Colors.white, size: 26.sp),
+            ),
+            SizedBox(width: 16.w),
+
+            // Text
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'My Subscription',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    'View your plan, benefits & renewal date',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: Colors.white.withOpacity(0.85),
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  // Static "Pro Plan" badge
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 10.w, vertical: 4.h),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(20.r),
+                    ),
+                    child: Text(
+                      '⭐ Pro Plan — Active',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Arrow
+            Icon(Icons.chevron_right,
+                color: Colors.white, size: 28.sp),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Verifications Section
+// ─────────────────────────────────────────────────────────────────────────────
+class _VerificationsSection extends StatelessWidget {
+  const _VerificationsSection({required this.c});
+  final ProfessionalHomeController c;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -216,22 +478,45 @@ class ProfessionalProfileScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.verified_user_outlined, color: const Color(0xFF43A047), size: 20.sp),
+                Icon(Icons.verified_user_outlined,
+                    color: const Color(0xFF43A047), size: 20.sp),
                 SizedBox(width: 8.w),
-                Text('Verifications',
-                    style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700, color: const Color(0xFF212121))),
+                Text(
+                  'Verifications',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF212121),
+                  ),
+                ),
               ],
             ),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
+            Obx(() => Container(
+              padding: EdgeInsets.symmetric(
+                  horizontal: 12.w, vertical: 5.h),
               decoration: BoxDecoration(
-                color: const Color(0xFFE8F5E9),
+                color: c.isVerified.value
+                    ? const Color(0xFFE8F5E9)
+                    : const Color(0xFFF5F5F5),
                 borderRadius: BorderRadius.circular(20.r),
-                border: Border.all(color: const Color(0xFF43A047), width: 1),
+                border: Border.all(
+                  color: c.isVerified.value
+                      ? const Color(0xFF43A047)
+                      : const Color(0xFFBDBDBD),
+                  width: 1,
+                ),
               ),
-              child: Text('100% Trusted',
-                  style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600, color: const Color(0xFF43A047))),
-            ),
+              child: Text(
+                c.isVerified.value ? '100% Trusted' : 'Pending',
+                style: TextStyle(
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w600,
+                  color: c.isVerified.value
+                      ? const Color(0xFF43A047)
+                      : const Color(0xFF9E9E9E),
+                ),
+              ),
+            )),
           ],
         ),
         SizedBox(height: 14.h),
@@ -240,245 +525,155 @@ class ProfessionalProfileScreen extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(16.r),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2)),
             ],
           ),
           child: Column(
             children: [
-              Obx(() => Row(
-                children: [
-                  _buildTab(
-                    icon: Icons.verified_user_outlined,
-                    label: 'Government ID',
-                    isSelected: c.selectedTab.value == 0,
-                    onTap: () => c.selectTab(0),
-                  ),
-                  _buildTab(
-                    icon: Icons.workspace_premium_outlined,
-                    label: 'Certificates',
-                    isSelected: c.selectedTab.value == 1,
-                    onTap: () => c.selectTab(1),
-                  ),
-                ],
+              Obx(() => _VerificationTile(
+                icon: Icons.verified_user,
+                iconColor: const Color(0xFF1565C0),
+                iconBg: const Color(0xFFE3F2FD),
+                title: 'Government ID',
+                subtitle: c.isVerified.value
+                    ? 'Identity verified'
+                    : 'Verification pending',
+                isVerified: c.isVerified.value,
               )),
-              const Divider(height: 1, color: Color(0xFFEEEEEE)),
-              Obx(() => c.selectedTab.value == 0 ? _buildGovernmentIdTab() : _buildCertificatesTab()),
+              Divider(
+                  height: 1,
+                  indent: 16.w,
+                  endIndent: 16.w,
+                  color: const Color(0xFFEEEEEE)),
+              Obx(() => _VerificationTile(
+                icon: Icons.workspace_premium,
+                iconColor: const Color(0xFFF8C106),
+                iconBg: const Color(0xFFFFF8E1),
+                title: 'Certificates',
+                subtitle: c.certificates.value > 0
+                    ? '${c.certificates.value} certificate(s) on file'
+                    : 'No certificates uploaded',
+                isVerified: c.certificates.value > 0,
+              )),
             ],
           ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildTab({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: EdgeInsets.symmetric(vertical: 14.h),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: isSelected ? const Color(0xFF43A047) : Colors.transparent,
-                width: 2,
-              ),
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 16.sp,
-                  color: isSelected ? const Color(0xFF43A047) : const Color(0xFF9E9E9E)),
-              SizedBox(width: 6.w),
-              Text(label,
-                  style: TextStyle(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected ? const Color(0xFF43A047) : const Color(0xFF9E9E9E),
-                  )),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+class _VerificationTile extends StatelessWidget {
+  const _VerificationTile({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.title,
+    required this.subtitle,
+    required this.isVerified,
+  });
 
-  Widget _buildGovernmentIdTab() {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String title;
+  final String subtitle;
+  final bool isVerified;
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.all(16.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.check_circle, color: const Color(0xFF43A047), size: 20.sp),
-                  SizedBox(width: 8.w),
-                  Text('Verified Identity',
-                      style: TextStyle(
-                          fontSize: 15.sp, fontWeight: FontWeight.w700, color: const Color(0xFF212121))),
-                ],
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF43A047),
-                  borderRadius: BorderRadius.circular(20.r),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.check, color: Colors.white, size: 12.sp),
-                    SizedBox(width: 4.w),
-                    Text('Verified',
-                        style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600, color: Colors.white)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 14.h),
-          Container(
-            padding: EdgeInsets.all(14.w),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFAFAFA),
-              borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(color: const Color(0xFFEEEEEE), width: 1),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 56.w,
-                  height: 56.w,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8C106),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Icon(Icons.verified_user, color: Colors.white, size: 26.sp),
-                ),
-                SizedBox(width: 14.w),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('National ID (NID)',
-                        style: TextStyle(
-                            fontSize: 14.sp, fontWeight: FontWeight.w700, color: const Color(0xFF212121))),
-                    SizedBox(height: 4.h),
-                    Text('Government Database Verified',
-                        style: TextStyle(fontSize: 12.sp, color: const Color(0xFF9E9E9E))),
-                    SizedBox(height: 2.h),
-                    Text('Issued: January 2020',
-                        style: TextStyle(fontSize: 11.sp, color: const Color(0xFFBDBDBD))),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCertificatesTab() {
-    return Padding(
-      padding: EdgeInsets.all(16.w),
-      child: Center(
-        child: Text('No certificates on file.',
-            style: TextStyle(fontSize: 14.sp, color: const Color(0xFF9E9E9E))),
-      ),
-    );
-  }
-
-  // ─────────────────────── Recent Reviews ────────────────────────
-  Widget _buildRecentReviews(ProfessionalProfileController c) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Recent Reviews',
-                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700, color: const Color(0xFF212121))),
-            GestureDetector(
-              onTap: () {
-
-              },
-              child: Text('View All',
-                  style: TextStyle(fontSize: 13.sp, color: const Color(0xFF9E9E9E))),
-            ),
-          ],
-        ),
-        SizedBox(height: 12.h),
-        Obx(() => Column(
-          children: c.reviews
-              .map((r) => Padding(
-            padding: EdgeInsets.only(bottom: 10.h),
-            child: _buildReviewCard(r),
-          ))
-              .toList(),
-        )),
-      ],
-    );
-  }
-
-  Widget _buildReviewCard(ReviewModel r) {
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14.r),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 5)),
-        ],
-      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 40.w,
-            height: 40.w,
-            decoration: BoxDecoration(color: r.color, shape: BoxShape.circle),
-            alignment: Alignment.center,
-            child: Text(r.initials,
-                style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w700, color: Colors.white)),
+            width: 44.w,
+            height: 44.w,
+            decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(12.r)),
+            child: Icon(icon, color: iconColor, size: 22.sp),
           ),
-          SizedBox(width: 12.w),
+          SizedBox(width: 14.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Text(r.name,
-                        style: TextStyle(
-                            fontSize: 14.sp, fontWeight: FontWeight.w700, color: const Color(0xFF212121))),
-                    SizedBox(width: 8.w),
-                    Row(
-                      children: List.generate(
-                        5,
-                            (i) => Icon(
-                          i < r.stars ? Icons.star : Icons.star_border,
-                          color: const Color(0xFFF8C106),
-                          size: 13.sp,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 4.h),
-                Text(r.comment,
-                    style: TextStyle(fontSize: 13.sp, color: const Color(0xFF9E9E9E))),
+                Text(title,
+                    style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF212121))),
+                SizedBox(height: 3.h),
+                Text(subtitle,
+                    style: TextStyle(
+                        fontSize: 12.sp,
+                        color: const Color(0xFF9E9E9E))),
               ],
             ),
+          ),
+          Icon(
+            isVerified
+                ? Icons.check_circle
+                : Icons.radio_button_unchecked,
+            color: isVerified
+                ? const Color(0xFF43A047)
+                : const Color(0xFFBDBDBD),
+            size: 20.sp,
           ),
         ],
       ),
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bio Section
+// ─────────────────────────────────────────────────────────────────────────────
+class _BioSection extends StatelessWidget {
+  const _BioSection({required this.c});
+  final ProfessionalHomeController c;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final bio = c.professionalBio.value;
+      if (bio.isEmpty) return const SizedBox.shrink();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('About',
+              style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF212121))),
+          SizedBox(height: 10.h),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(16.w),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14.r),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2)),
+              ],
+            ),
+            child: Text(
+              bio,
+              style: TextStyle(
+                  fontSize: 14.sp,
+                  color: const Color(0xFF424242),
+                  height: 1.6),
+            ),
+          ),
+        ],
+      );
+    });
   }
 }

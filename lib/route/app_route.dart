@@ -1,7 +1,13 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';
+import 'package:handyConnect/feature/professional/main_screen_1.dart';
+import 'package:handyConnect/feature/professional/screen/active_job_screen.dart';
+import 'package:handyConnect/feature/professional/screen/earning_screen.dart';
+import 'package:handyConnect/feature/professional/screen/job_request_screen.dart';
+import 'package:handyConnect/feature/professional/screen/professional_home_screen.dart';
 import 'package:handyConnect/feature/professional/screen/professional_profile_screen.dart';
+import 'package:handyConnect/feature/professional/screen/subscription_screen.dart';
 import 'package:handyConnect/route/route_name.dart';
 import '../feature/auth/screen/forgot_password_screen.dart';
 import '../feature/auth/screen/otp_verification_screen.dart';
@@ -65,7 +71,14 @@ class AppRoute {
 
 
     //Professional
+    GetPage(name: RouteName.main1,                 page: () => MainScreen1()),
     GetPage(name: RouteName.professionalProfile,   page: () => ProfessionalProfileScreen()),
+    GetPage(name: RouteName.professionalHome,      page: () => ProfessionalHomeScreen()),
+    GetPage(name: RouteName.activejob,             page: () => ActiveJobScreen()),
+    GetPage(name: RouteName.jobRequests,           page: () => JobRequestsScreen()),
+    GetPage(name: RouteName.earning,               page: () => EarningsScreen()),
+    GetPage(name: RouteName.subscription,          page: () => SubscriptionScreen()),
+
 
 
 

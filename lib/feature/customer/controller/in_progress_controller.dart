@@ -1,5 +1,9 @@
 import 'package:get/get.dart';
 
+import '../../../core/local_storage/user_info.dart';
+import '../../chat/controller/chat_controller.dart';
+import '../../chat/screen/chat_screen.dart';
+
 enum TimelineStatus { completed, active, pending }
 
 class TimelineStep {
@@ -42,7 +46,22 @@ class InProgressController extends GetxController {
     Get.back();
   }
 
+// openChat() method replace করো:
   void openChat() {
-    // navigate to chat screen
+    if (Get.isRegistered<ProfessionalChatController>()) {
+      Get.delete<ProfessionalChatController>(force: true);
+    }
+    Get.put(ProfessionalChatController());
+
+    Get.to(
+          () => const ProfessionalChatScreen(),
+      arguments: {
+        'requestId'  : UserInfo.getRequestIdSync() ?? 0,
+        // 'clientName' : technicianName.value,
+        'jobLabel'   : 'Job #${UserInfo.getRequestIdSync() ?? 0}',
+        // 'clientPhoto': technicianImage.value,
+        'myName'     : UserInfo.getFullNameSync() ?? '',
+      },
+    );
   }
 }

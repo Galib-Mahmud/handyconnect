@@ -24,14 +24,23 @@ class RouteName{
   static const String inProgress = '/inProgress';
   static const String applicationSent = '/applicationSent';
   static const String directHire = '/directHire';
-
-
   static const String savedAddresses = '/savedAddresses';
 
 
 
   //Professional
+  static const String main1 = '/main1';
   static const String professionalProfile = '/professionalProfile';
+  static const String professionalHome = '/professionalHome';
+  static const String activejob = '/activejob';
+  static const String earning = '/earning';
+  static const String jobrequest = '/jobrequest';
+  static const String reportIssue = '/reportIssue';
+  static const String subscription = '/subscription';
+
+
+
+
 
   static const String newRequestScreen1 = '/newRequestScreen1';
   static const String professional = '/professional';
@@ -45,20 +54,19 @@ class RouteName{
 
 //Professional
 
-  static const String main1 = '/main1';
-  static const String professionalHome = '/professionalHome';
+
+
   static const String jobRequests = '/jobRequests';
   static const String onboarding1 = '/onboarding1';
-  static const String subscription = '/subscription';
-  static const String activejob = '/activejob';
+
 
 
 
 
   //Sohan
   static const String homepage = '/homepage';
-  static const String jobrequest = '/jobrequest';
-  static const String earning = '/earningpage';
+
+
   static const String profilepage = '/profilepage';
   static const String activejobscreen = '/activejobscreen';
   static const String onboardingFlow = '/onboarding';
