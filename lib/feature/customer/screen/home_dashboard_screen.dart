@@ -7,7 +7,7 @@ import 'package:handyConnect/feature/customer/screen/recent_request_screen.dart'
 
 import '../../../route/route_name.dart';
 import '../controller/home_dashboard_controller.dart';
-import 'in_progress_screen.dart';
+import 'customer_in_progress_screen.dart';
 import 'notification_screen.dart';
 
 
@@ -307,7 +307,7 @@ class HomeDashboardScreen extends StatelessWidget {
     final assetPath   = HomeController.assetFromString(item['service_icon'] ?? '');
 
     return GestureDetector(
-      onTap: () => Get.to(() => const InProgressScreen()),
+      onTap: () => Get.to(() => const CustomerInProgressScreen()),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 16.h),
         decoration: BoxDecoration(

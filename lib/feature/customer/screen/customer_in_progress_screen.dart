@@ -1,11 +1,13 @@
+// lib/features/order/views/customer_in_progress_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
-import '../controller/in_progress_controller.dart';
+import '../controller/customer_in_progress_controller.dart';
 
-class InProgressScreen extends StatelessWidget {
-  const InProgressScreen({super.key});
+class CustomerInProgressScreen extends StatelessWidget {
+  const CustomerInProgressScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,35 +16,77 @@ class InProgressScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       body: SafeArea(
-        child: Column(
-          children: [
-            SizedBox(height: 16.h),
-            _buildHeader(),
-            Divider(height: 24.h, color: const Color(0xFFEEEEEE)),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 20.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildMapView(),
-                    SizedBox(height: 16.h),
-                    _buildTechnicianCard(controller),
-                    SizedBox(height: 24.h),
-                    _buildTimeline(controller),
-                    SizedBox(height: 24.h),
-                  ],
+        child: Obx(() {
+          // ── Full-screen loading (first load only) ────────────────
+          if (controller.isLoading.value && controller.steps.isEmpty) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFFF8C106)),
+            );
+          }
+
+          // ── Full-screen error ────────────────────────────────────
+          if (controller.errorMsg.value.isNotEmpty && controller.steps.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.wifi_off_rounded,
+                      size: 48.sp, color: const Color(0xFFBDBDBD)),
+                  SizedBox(height: 12.h),
+                  Text(
+                    controller.errorMsg.value,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 14.sp, color: const Color(0xFF9E9E9E)),
+                  ),
+                  SizedBox(height: 16.h),
+                  ElevatedButton(
+                    onPressed: controller.fetchStatus,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF8C106),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.r)),
+                    ),
+                    child: Text('Retry',
+                        style:
+                        TextStyle(fontSize: 14.sp, color: Colors.white)),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // ── Main content ─────────────────────────────────────────
+          return Column(
+            children: [
+              SizedBox(height: 16.h),
+              _buildHeader(),
+              Divider(height: 24.h, color: const Color(0xFFEEEEEE)),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildMapView(),
+                      SizedBox(height: 16.h),
+                      _buildTechnicianCard(controller),
+                      SizedBox(height: 24.h),
+                      _buildTimeline(controller),
+                      SizedBox(height: 24.h),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            _buildCancelButton(controller),
-          ],
-        ),
+              _buildCancelButton(controller),
+            ],
+          );
+        }),
       ),
     );
   }
 
-  // ─────────────────────── Header ────────────────────────────────────
+  // ─────────────────────── Header ──────────────────────────────────
   Widget _buildHeader() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.w),
@@ -50,7 +94,8 @@ class InProgressScreen extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: () => Get.back(),
-            child: Icon(Icons.arrow_back, size: 22.sp, color: const Color(0xFF212121)),
+            child: Icon(Icons.arrow_back,
+                size: 22.sp, color: const Color(0xFF212121)),
           ),
           SizedBox(width: 16.w),
           Text(
@@ -66,7 +111,7 @@ class InProgressScreen extends StatelessWidget {
     );
   }
 
-  // ─────────────────────── Map View ──────────────────────────────────
+  // ─────────────────────── Map View ────────────────────────────────
   Widget _buildMapView() {
     return Container(
       height: 180.h,
@@ -77,14 +122,11 @@ class InProgressScreen extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Subtle map grid lines
           CustomPaint(
             size: Size(double.infinity, 180.h),
             painter: _MapGridPainter(),
           ),
-          // Pulsing location dot
           _PulsingDot(),
-          // Label
           Text(
             'Map View (On The Way)',
             style: TextStyle(
@@ -98,7 +140,7 @@ class InProgressScreen extends StatelessWidget {
     );
   }
 
-  // ─────────────────────── Technician Card ───────────────────────────
+  // ─────────────────────── Technician Card ─────────────────────────
   Widget _buildTechnicianCard(InProgressController controller) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
@@ -112,67 +154,38 @@ class InProgressScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              // Avatar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(30.r),
-                child: Image.asset(
-                  controller.technicianImage.value,
-                  width: 52.w,
-                  height: 52.w,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 52.w,
-                    height: 52.w,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE0E0E0),
-                      borderRadius: BorderRadius.circular(30.r),
-                    ),
-                    child: Icon(Icons.person, color: const Color(0xFF9E9E9E), size: 28.sp),
-                  ),
-                ),
-              ),
+              // ── Avatar: NetworkImage with fallback ───────────────
+              Obx(() {
+                final photo = controller.technicianImage.value;
+                return CircleAvatar(
+                  radius: 26.r,
+                  backgroundColor: const Color(0xFFE0E0E0),
+                  backgroundImage:
+                  photo.isNotEmpty ? NetworkImage(photo) : null,
+                  child: photo.isEmpty
+                      ? Icon(Icons.person,
+                      color: const Color(0xFF9E9E9E), size: 28.sp)
+                      : null,
+                );
+              }),
               SizedBox(width: 14.w),
-              // Name & rating
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Obx(() => Text(
-                    controller.technicianName.value,
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF212121),
-                    ),
-                  )),
-                  SizedBox(height: 4.h),
-                  Obx(() => Row(
-                    children: [
-                      Icon(Icons.star, color: const Color(0xFFFFA726), size: 14.sp),
-                      SizedBox(width: 4.w),
-                      Text(
-                        '${controller.technicianRating.value}',
-                        style: TextStyle(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF212121),
-                        ),
-                      ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        '(${controller.technicianJobs.value} jobs)',
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: const Color(0xFFBDBDBD),
-                        ),
-                      ),
-                    ],
-                  )),
-                ],
+              // ── Name only (rating/jobs removed — not in API) ─────
+              Expanded(
+                child: Obx(() => Text(
+                  controller.technicianName.value.isEmpty
+                      ? 'Loading…'
+                      : controller.technicianName.value,
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF212121),
+                  ),
+                )),
               ),
             ],
           ),
           SizedBox(height: 14.h),
-          // Chat button
+          // ── Chat button ─────────────────────────────────────────
           GestureDetector(
             onTap: controller.openChat,
             child: Container(
@@ -182,7 +195,8 @@ class InProgressScreen extends StatelessWidget {
                 color: Color(0xFF1565C0),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.chat_bubble, color: Colors.white, size: 18.sp),
+              child:
+              Icon(Icons.chat_bubble, color: Colors.white, size: 18.sp),
             ),
           ),
         ],
@@ -190,7 +204,7 @@ class InProgressScreen extends StatelessWidget {
     );
   }
 
-  // ─────────────────────── Timeline ──────────────────────────────────
+  // ─────────────────────── Timeline ────────────────────────────────
   Widget _buildTimeline(InProgressController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,8 +230,9 @@ class InProgressScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTimelineStep({required TimelineStep step, required bool isLast}) {
-    Widget leadingIcon;
+  Widget _buildTimelineStep(
+      {required TimelineStep step, required bool isLast}) {
+    late Widget leadingIcon;
 
     switch (step.status) {
       case TimelineStatus.completed:
@@ -225,9 +240,7 @@ class InProgressScreen extends StatelessWidget {
           width: 36.w,
           height: 36.w,
           decoration: const BoxDecoration(
-            color: Color(0xFF43A047),
-            shape: BoxShape.circle,
-          ),
+              color: Color(0xFF43A047), shape: BoxShape.circle),
           child: Icon(Icons.check, color: Colors.white, size: 18.sp),
         );
         break;
@@ -236,9 +249,7 @@ class InProgressScreen extends StatelessWidget {
           width: 36.w,
           height: 36.w,
           decoration: const BoxDecoration(
-            color: Color(0xFF43A047),
-            shape: BoxShape.circle,
-          ),
+              color: Color(0xFF43A047), shape: BoxShape.circle),
           child: Icon(Icons.access_time, color: Colors.white, size: 18.sp),
         );
         break;
@@ -299,9 +310,8 @@ class InProgressScreen extends StatelessWidget {
                         Text(
                           step.time!,
                           style: TextStyle(
-                            fontSize: 12.sp,
-                            color: const Color(0xFFBDBDBD),
-                          ),
+                              fontSize: 12.sp,
+                              color: const Color(0xFFBDBDBD)),
                         ),
                     ],
                   ),
@@ -310,9 +320,7 @@ class InProgressScreen extends StatelessWidget {
                     Text(
                       step.subtitle!,
                       style: TextStyle(
-                        fontSize: 12.sp,
-                        color: const Color(0xFF9E9E9E),
-                      ),
+                          fontSize: 12.sp, color: const Color(0xFF9E9E9E)),
                     ),
                   ],
                 ],
@@ -324,7 +332,7 @@ class InProgressScreen extends StatelessWidget {
     );
   }
 
-  // ─────────────────────── Cancel Button ─────────────────────────────
+  // ─────────────────────── Cancel Button ───────────────────────────
   Widget _buildCancelButton(InProgressController controller) {
     return Padding(
       padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 24.h),
@@ -352,14 +360,13 @@ class InProgressScreen extends StatelessWidget {
   }
 }
 
-// ─────────────────── Map grid painter ──────────────────────────────
+// ─────────────────── Map grid painter ────────────────────────────
 class _MapGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = const Color(0xFFCDD0DA)
       ..strokeWidth = 0.5;
-
     const step = 30.0;
     for (double x = 0; x < size.width; x += step) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
@@ -370,16 +377,17 @@ class _MapGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_MapGridPainter oldDelegate) => false;
+  bool shouldRepaint(_MapGridPainter old) => false;
 }
 
-// ─────────────────── Pulsing animated dot ──────────────────────────
+// ─────────────────── Pulsing animated dot ────────────────────────
 class _PulsingDot extends StatefulWidget {
   @override
   State<_PulsingDot> createState() => _PulsingDotState();
 }
 
-class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderStateMixin {
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _scale;
   late Animation<double> _opacity;
@@ -387,8 +395,11 @@ class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderState
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat();
-    _scale = Tween<double>(begin: 1.0, end: 2.2).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+    _ctrl =
+    AnimationController(vsync: this, duration: const Duration(seconds: 1))
+      ..repeat();
+    _scale = Tween<double>(begin: 1.0, end: 2.2)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
     _opacity = Tween<double>(begin: 0.5, end: 0.0).animate(_ctrl);
   }
 
@@ -415,10 +426,8 @@ class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderState
                 child: Container(
                   width: 20,
                   height: 20,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFA726),
-                    shape: BoxShape.circle,
-                  ),
+                  decoration: const BoxDecoration(
+                      color: Color(0xFFFFA726), shape: BoxShape.circle),
                 ),
               ),
             ),
@@ -427,9 +436,7 @@ class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderState
             width: 14,
             height: 14,
             decoration: const BoxDecoration(
-              color: Color(0xFFFFA726),
-              shape: BoxShape.circle,
-            ),
+                color: Color(0xFFFFA726), shape: BoxShape.circle),
           ),
         ],
       ),

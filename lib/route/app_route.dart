@@ -20,7 +20,7 @@ import '../feature/customer/screen/application_sent_screen.dart';
 import '../feature/customer/screen/confirm_request_screen.dart';
 import '../feature/customer/screen/direct_hire_screen.dart';
 import '../feature/customer/screen/home_dashboard_screen.dart';
-import '../feature/customer/screen/in_progress_screen.dart';
+import '../feature/customer/screen/customer_in_progress_screen.dart';
 import '../feature/customer/screen/my_request_screen.dart';
 import '../feature/customer/screen/new_request_analysis_screen.dart';
 import '../feature/customer/screen/new_request_screen.dart';
@@ -57,7 +57,7 @@ class AppRoute {
     GetPage(name: RouteName.newRequestAnalysis,page: () => NewRequestAnalysisScreen()),
     GetPage(name: RouteName.confirmReq,        page: () => ConfirmRequestScreen()),
     GetPage(name: RouteName.serviceProvider,   page: () => ServiceProviderScreen()),
-    GetPage(name: RouteName.inProgress,        page: () => InProgressScreen()),
+    GetPage(name: RouteName.customerinProgress,        page: () => CustomerInProgressScreen()),
     GetPage(name: RouteName.applicationSent,   page: () => ApplicationSentScreen()),
     GetPage(name: RouteName.directHire,        page: () => DirectHire()),
 

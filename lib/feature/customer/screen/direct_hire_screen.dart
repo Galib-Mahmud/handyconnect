@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:handyConnect/route/route_name.dart';
 
 import '../controller/direct_hire_controller.dart';
 
@@ -30,7 +31,19 @@ class DirectHire extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
+        // ── Single actions block ───────────────────────────────────
         actions: [
+          TextButton(
+            onPressed: () => Get.toNamed(RouteName.customerinProgress),
+            child: Text(
+              'Skip',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF667085),
+              ),
+            ),
+          ),
           Obx(() => c.isLoadingProviders.value
               ? Padding(
             padding: EdgeInsets.only(right: 16.w),
@@ -53,7 +66,6 @@ class DirectHire extends StatelessWidget {
         ],
       ),
       body: Obx(() {
-        // ── STEP 1 loading — full screen spinner ──────────────────
         if (c.isLoadingProviders.value && c.providers.isEmpty) {
           return Center(
             child: Column(
@@ -71,7 +83,6 @@ class DirectHire extends StatelessWidget {
           );
         }
 
-        // ── Error ─────────────────────────────────────────────────
         if (c.errorMessage.value.isNotEmpty && c.providers.isEmpty) {
           return Center(
             child: Column(
@@ -103,7 +114,6 @@ class DirectHire extends StatelessWidget {
           );
         }
 
-        // ── Empty ─────────────────────────────────────────────────
         if (c.providers.isEmpty) {
           return Center(
             child: Column(
@@ -122,7 +132,6 @@ class DirectHire extends StatelessWidget {
           );
         }
 
-        // ── Provider list (STEP 1 complete) ───────────────────────
         return RefreshIndicator(
           color: const Color(0xFFF8C106),
           onRefresh: c.fetchProviders,
@@ -131,7 +140,7 @@ class DirectHire extends StatelessWidget {
             itemCount: c.providers.length,
             separatorBuilder: (_, __) => SizedBox(height: 16.h),
             itemBuilder: (_, index) => _ProfessionalCard(
-              provider  : c.providers[index],
+              provider: c.providers[index],
               controller: c,
             ),
           ),
@@ -239,8 +248,8 @@ class _ProfessionalCard extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: const Color(0xFF00C853),
                               shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: Colors.white, width: 2),
+                              border:
+                              Border.all(color: Colors.white, width: 2),
                             ),
                           ),
                         ),
@@ -314,8 +323,7 @@ class _ProfessionalCard extends StatelessWidget {
                     Text(
                       'Zip Code',
                       style: TextStyle(
-                          fontSize: 12.sp,
-                          color: const Color(0xFF98A2B3)),
+                          fontSize: 12.sp, color: const Color(0xFF98A2B3)),
                     ),
                     Text(
                       provider.zipCode ?? '—',
@@ -328,8 +336,7 @@ class _ProfessionalCard extends StatelessWidget {
                   ],
                 ),
 
-                // ── Send Request button ────────────────────────────
-                // Blocked while GET is loading OR POST is in flight
+                // ── Send Request button ──────────────────────────
                 Obx(() {
                   final blocked = controller.isLoadingProviders.value ||
                       controller.isSending.value;

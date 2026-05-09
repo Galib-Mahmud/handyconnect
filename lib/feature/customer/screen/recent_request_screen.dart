@@ -5,7 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../controller/recent_request_controller.dart';
-import 'in_progress_screen.dart';
+import 'customer_in_progress_screen.dart';
 
 class RecentRequestScreen extends StatelessWidget {
   const RecentRequestScreen({super.key});
@@ -192,7 +192,7 @@ class _RequestCard extends StatelessWidget {
         : _iconFallbackName(request.serviceIcon);
 
     return GestureDetector(
-      onTap: () => Get.to(() => const InProgressScreen(),
+      onTap: () => Get.to(() => const CustomerInProgressScreen(),
           arguments: {'requestId': request.id}),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 18.h),

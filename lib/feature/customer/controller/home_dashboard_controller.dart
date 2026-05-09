@@ -2,9 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:handyConnect/core/endpoint/api_client.dart';
+import 'package:handyConnect/core/endpoint/api_endpoint.dart';
 
-import '../../../../../core/endpoint/api_client.dart';
-import '../../../../../core/endpoint/api_endpoint.dart';
 
 
 class HomeController extends GetxController {

@@ -169,7 +169,7 @@ class DirectHireController extends GetxController {
       print('🚀 [DIRECT HIRE] Navigating to in-progress screen...');
 
       // STEP 3 — navigate immediately after successful POST
-      Get.toNamed(RouteName.inProgress);
+      Get.toNamed(RouteName.customerinProgress);
 
     } on HttpException catch (e) {
       print('❌ [DIRECT HIRE] STEP 2 FAILED — HttpException [${e.statusCode}]: ${e.message}');

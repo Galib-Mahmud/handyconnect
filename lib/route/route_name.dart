@@ -21,7 +21,7 @@ class RouteName{
   static const String newRequestAnalysis = '/newRequestAnalysis';
   static const String confirmReq = '/confirmReq';
   static const String serviceProvider = '/serviceProvider';
-  static const String inProgress = '/inProgress';
+  static const String customerinProgress = '/CustomerinProgress';
   static const String applicationSent = '/applicationSent';
   static const String directHire = '/directHire';
   static const String savedAddresses = '/savedAddresses';
