@@ -49,7 +49,7 @@ class MyApp extends StatelessWidget {
     if (role == 'PROVIDER') {
       return (onboardingStatus == 'APPROVED')
           ? RouteName.main1
-          : RouteName.onboarding1;
+          : RouteName.onboarding;
     }
 
     return RouteName.signin;

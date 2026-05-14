@@ -1,6 +1,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';
+import 'package:handyConnect/feature/onboarding/screen/onboarding_screen.dart';
 import 'package:handyConnect/feature/professional/main_screen_1.dart';
 import 'package:handyConnect/feature/professional/screen/active_job_screen.dart';
 import 'package:handyConnect/feature/professional/screen/earning_screen.dart';
@@ -78,6 +79,7 @@ class AppRoute {
     GetPage(name: RouteName.jobRequests,           page: () => JobRequestsScreen()),
     GetPage(name: RouteName.earning,               page: () => EarningsScreen()),
     GetPage(name: RouteName.subscription,          page: () => SubscriptionScreen()),
+    GetPage(name: RouteName.onboarding,            page: () => Onboarding()),
 
 
 

@@ -120,7 +120,7 @@ class AuthController extends GetxController {
         Get.offAllNamed(RouteName.main1);
       } else {
         // PENDING | UNDER_REVIEW | null → must complete onboarding
-        Get.offAllNamed(RouteName.onboarding1);
+        Get.offAllNamed(RouteName.onboarding);
       }
     } else {
       Get.offAllNamed(RouteName.signin);
@@ -269,13 +269,42 @@ class AuthController extends GetxController {
       );
 
       if (response != null) {
-        // ── Save tokens ──────────────────────────────────────────
+        final user = response['user'] as Map<String, dynamic>?;
+
+// ── is_verified string বা bool দুটোই handle করো ──────────
+        final isVerifiedRaw = user?['is_verified'];
+        final isVerified = isVerifiedRaw == true || isVerifiedRaw == 'true';
+
+        // ── is_verified false হলে block করো ─────────────────────
+        if (!isVerified) {
+          Future.delayed(const Duration(milliseconds: 400), () {
+            Get.rawSnackbar(
+              duration: const Duration(seconds: 7),
+              backgroundColor: Colors.black.withOpacity(0.75),
+              messageText: const Text(
+                '⏳ Your papers are now under admin review.\n\nOnce approved, you will be able to log in and access your account.',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              borderRadius: 16,
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              isDismissible: true,
+              overlayBlur: 0,
+            );
+          });
+          return; // token save করবে না, navigate করবে না
+        }
+
+        // ── বাকি সব আগের মতোই ───────────────────────────────────
         await UserInfo.setAccessToken(response['access'] ?? '');
         await UserInfo.setRefreshToken(response['refresh'] ?? '');
-        await UserInfo.setFullName(response['full_name'] ?? ''); // ← এটা add করো
+        await UserInfo.setFullName(user?['full_name'] ?? '');
 
-        // ── Save role and onboarding_status ──────────────────────
-        final user = response['user'] as Map<String, dynamic>?;
         final role = user?['role']?.toString() ?? '';
         final onboardingStatus = user?['onboarding_status']?.toString() ?? '';
 
@@ -284,10 +313,8 @@ class AuthController extends GetxController {
           await UserInfo.setOnboardingStatus(onboardingStatus);
         }
 
-        // Flush SharedPreferences before GetX navigates
         await Future.delayed(Duration.zero);
 
-        // ── Route by role + onboarding status ───────────────────
         navigateByRoleAndOnboarding(
           role: role,
           onboardingStatus: onboardingStatus,

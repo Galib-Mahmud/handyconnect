@@ -37,6 +37,7 @@ class RouteName{
   static const String jobrequest = '/jobrequest';
   static const String reportIssue = '/reportIssue';
   static const String subscription = '/subscription';
+  static const String onboarding = '/onboarding';
 
 
 
@@ -69,7 +70,7 @@ class RouteName{
 
   static const String profilepage = '/profilepage';
   static const String activejobscreen = '/activejobscreen';
-  static const String onboardingFlow = '/onboarding';
+
 
 
 

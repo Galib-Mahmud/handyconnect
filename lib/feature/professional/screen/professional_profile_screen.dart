@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:handyConnect/feature/professional/controller/professional_home_controller.dart';
+import 'package:handyConnect/feature/professional/controller/professional_profile_controller.dart';
 import 'package:handyConnect/route/route_name.dart';
 
 class ProfessionalProfileScreen extends StatelessWidget {
@@ -11,7 +12,8 @@ class ProfessionalProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = Get.find<ProfessionalHomeController>();
+    final c  = Get.find<ProfessionalHomeController>();
+    final pc = Get.put(ProfessionalProfileController());
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -19,14 +21,13 @@ class ProfessionalProfileScreen extends StatelessWidget {
         child: Column(
           children: [
             SizedBox(height: 16.h),
-            _Header(),
+            const _Header(),
             Divider(height: 20.h, color: const Color(0xFFEEEEEE)),
             Expanded(
               child: Obx(() {
                 if (c.isLoading.value) {
                   return const Center(
-                    child: CircularProgressIndicator(
-                        color: Color(0xFFF8C106)),
+                    child: CircularProgressIndicator(color: Color(0xFFF8C106)),
                   );
                 }
                 return SingleChildScrollView(
@@ -39,12 +40,66 @@ class ProfessionalProfileScreen extends StatelessWidget {
                       SizedBox(height: 16.h),
                       _StatsRow(c: c),
                       SizedBox(height: 24.h),
-                      _SubscriptionCard(),   // ← NEW
+                      const _SubscriptionCard(),
                       SizedBox(height: 24.h),
                       _VerificationsSection(c: c),
                       SizedBox(height: 24.h),
                       _BioSection(c: c),
-                      SizedBox(height: 32.h),
+                      SizedBox(height: 8.h),
+
+                      // ── Delete Account ──────────────────────────
+                      GestureDetector(
+                        onTap: () => pc.showDeleteAccountDialog(context),
+                        child: Container(
+                          margin: EdgeInsets.symmetric(horizontal: 40.w),
+                          padding: EdgeInsets.symmetric(vertical: 14.h),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30.r),
+                            border: Border.all(
+                                color: const Color(0xFFE53935), width: 1.5),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.delete_outline,
+                                  color: const Color(0xFFE53935), size: 18.sp),
+                              SizedBox(width: 8.w),
+                              Text(
+                                'Delete Account',
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFFE53935),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 16.h),
+
+                      // ── Log Out ─────────────────────────────────
+                      GestureDetector(
+                        onTap: () => pc.showLogoutDialog(context),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.logout_rounded,
+                                color: const Color(0xFFE53935), size: 20.sp),
+                            SizedBox(width: 8.w),
+                            Text(
+                              'Log Out',
+                              style: TextStyle(
+                                fontSize: 15.sp,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFFE53935),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 40.h),
                     ],
                   ),
                 );
@@ -61,6 +116,8 @@ class ProfessionalProfileScreen extends StatelessWidget {
 // Header
 // ─────────────────────────────────────────────────────────────────────────────
 class _Header extends StatelessWidget {
+  const _Header();
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -136,8 +193,7 @@ class _ProfileCard extends StatelessWidget {
                         ? const Color(0xFF43A047)
                         : Colors.grey,
                     shape: BoxShape.circle,
-                    border:
-                    Border.all(color: Colors.white, width: 1.5),
+                    border: Border.all(color: Colors.white, width: 1.5),
                   ),
                 )),
               ),
@@ -172,8 +228,7 @@ class _ProfileCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.verified,
-                                color: const Color(0xFF43A047),
-                                size: 12.sp),
+                                color: const Color(0xFF43A047), size: 12.sp),
                             SizedBox(width: 3.w),
                             Text(
                               'Verified',
@@ -205,9 +260,7 @@ class _ProfileCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10.r),
                   ),
                   child: Text(
-                    c.isAvailable.value
-                        ? 'Available'
-                        : 'Unavailable',
+                    c.isAvailable.value ? 'Available' : 'Unavailable',
                     style: TextStyle(
                       fontSize: 11.sp,
                       fontWeight: FontWeight.w500,
@@ -324,9 +377,7 @@ class _StatsRow extends StatelessWidget {
 
 class _StatCard extends StatelessWidget {
   const _StatCard(
-      {required this.iconWidget,
-        required this.value,
-        required this.label});
+      {required this.iconWidget, required this.value, required this.label});
   final Widget iconWidget;
   final String value;
   final String label;
@@ -356,8 +407,8 @@ class _StatCard extends StatelessWidget {
                   color: const Color(0xFF212121))),
           SizedBox(height: 2.h),
           Text(label,
-              style: TextStyle(
-                  fontSize: 11.sp, color: const Color(0xFF9E9E9E))),
+              style:
+              TextStyle(fontSize: 11.sp, color: const Color(0xFF9E9E9E))),
         ],
       ),
     );
@@ -365,7 +416,7 @@ class _StatCard extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Subscription Card  ← NEW — fully static, routes to subscription screen
+// Subscription Card
 // ─────────────────────────────────────────────────────────────────────────────
 class _SubscriptionCard extends StatelessWidget {
   const _SubscriptionCard();
@@ -373,12 +424,11 @@ class _SubscriptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Get.toNamed(RouteName.subscription), // ← change route name
+      onTap: () => Get.toNamed(RouteName.subscription),
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.all(18.w),
         decoration: BoxDecoration(
-          // Gold gradient background
           gradient: const LinearGradient(
             colors: [Color(0xFFF8C106), Color(0xFFFFD54F)],
             begin: Alignment.topLeft,
@@ -395,7 +445,6 @@ class _SubscriptionCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Crown icon
             Container(
               width: 48.w,
               height: 48.w,
@@ -407,8 +456,6 @@ class _SubscriptionCard extends StatelessWidget {
                   color: Colors.white, size: 26.sp),
             ),
             SizedBox(width: 16.w),
-
-            // Text
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -430,7 +477,6 @@ class _SubscriptionCard extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 8.h),
-                  // Static "Pro Plan" badge
                   Container(
                     padding: EdgeInsets.symmetric(
                         horizontal: 10.w, vertical: 4.h),
@@ -450,10 +496,7 @@ class _SubscriptionCard extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Arrow
-            Icon(Icons.chevron_right,
-                color: Colors.white, size: 28.sp),
+            Icon(Icons.chevron_right, color: Colors.white, size: 28.sp),
           ],
         ),
       ),
@@ -593,8 +636,7 @@ class _VerificationTile extends StatelessWidget {
             width: 44.w,
             height: 44.w,
             decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(12.r)),
+                color: iconBg, borderRadius: BorderRadius.circular(12.r)),
             child: Icon(icon, color: iconColor, size: 22.sp),
           ),
           SizedBox(width: 14.w),
@@ -610,15 +652,12 @@ class _VerificationTile extends StatelessWidget {
                 SizedBox(height: 3.h),
                 Text(subtitle,
                     style: TextStyle(
-                        fontSize: 12.sp,
-                        color: const Color(0xFF9E9E9E))),
+                        fontSize: 12.sp, color: const Color(0xFF9E9E9E))),
               ],
             ),
           ),
           Icon(
-            isVerified
-                ? Icons.check_circle
-                : Icons.radio_button_unchecked,
+            isVerified ? Icons.check_circle : Icons.radio_button_unchecked,
             color: isVerified
                 ? const Color(0xFF43A047)
                 : const Color(0xFFBDBDBD),
