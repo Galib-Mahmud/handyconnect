@@ -1,289 +1,243 @@
-// // lib/features/professional/job_requests/controller/job_requests_controller.dart
-//
-// import 'dart:io';
-//
-// import 'package:get/get.dart';
-// import 'package:handyConnect/core/endpoint/api_client.dart';
-// import 'package:handyConnect/core/endpoint/api_endpoint.dart';
-// import 'package:handyConnect/feature/professional/screen/active_job_screen.dart';
-//
-//
-// class JobRequestsController extends GetxController {
-//   final ApiClient _apiClient = ApiClient(baseUrl: ApiEndpoint.baseUrl);
-//
-//   // ── Observables ───────────────────────────────────────────────────
-//   final RxBool isLoading = false.obs;
-//
-//   final RxList<Map<String, dynamic>> activeAndCompleted =
-//       <Map<String, dynamic>>[].obs;
-//   final RxList<Map<String, dynamic>> newLeads =
-//       <Map<String, dynamic>>[].obs;
-//
-//   @override
-//   void onInit() {
-//     super.onInit();
-//     fetchRequests();
-//   }
-//
-//   // ── Fetch All Requests ────────────────────────────────────────────
-//   Future<void> fetchRequests() async {
-//     try {
-//       isLoading.value = true;
-//       print('📋 [PRO REQUESTS] Fetching...');
-//
-//       final response = await _apiClient.get(ApiEndpoint.proRequests);
-//
-//       print('✅ [PRO REQUESTS] Response received');
-//
-//       activeAndCompleted.value = _parseList(response['active_and_completed']);
-//       newLeads.value = _parseList(response['new_leads']);
-//
-//       print('🔧 Active/Completed : ${activeAndCompleted.length}');
-//       print('🆕 New Leads        : ${newLeads.length}');
-//     } on HttpException catch (e) {
-//       print('❌ [PRO REQUESTS] HttpException: ${e.message}');
-//       Get.snackbar('Error', e.message);
-//     } catch (e) {
-//       print('❌ [PRO REQUESTS] Error: $e');
-//       Get.snackbar('Error', 'Something went wrong.');
-//     } finally {
-//       isLoading.value = false;
-//     }
-//   }
-//
-//   // ── Parse raw list ────────────────────────────────────────────────
-//   List<Map<String, dynamic>> _parseList(dynamic raw) {
-//     if (raw == null) return [];
-//     return List<Map<String, dynamic>>.from(
-//       (raw as List).map((e) => Map<String, dynamic>.from(e as Map)),
-//     );
-//   }
-//
-//   // ── Format ai_cost for display only (used in the card UI) ─────────
-//   /// API: { "min": 160, "max": 380, "currency": "EUR" }  →  "EUR 160 – 380"
-//   static String formatAiCost(dynamic aiCost) {
-//     if (aiCost == null) return '—';
-//     if (aiCost is String) return aiCost.isNotEmpty ? aiCost : '—';
-//     if (aiCost is Map) {
-//       final min = aiCost['min'];
-//       final max = aiCost['max'];
-//       final currency = aiCost['currency'] ?? '';
-//       if (min != null && max != null) return '$currency $min – $max';
-//       if (min != null) return '$currency $min';
-//       if (max != null) return '$currency $max';
-//     }
-//     return '—';
-//   }
-//
-//   // ── Accept Request → navigate to ActiveJobScreen ──────────────────
-//   Future<void> acceptRequest(int requestId) async {
-//     try {
-//       // Find the full request object (un-normalised — keep ai_cost as Map)
-//       final requestData = newLeads.firstWhere(
-//             (r) => r['id'] == requestId,
-//         orElse: () => {},
-//       );
-//
-//       if (requestData.isEmpty) {
-//         Get.snackbar('Error', 'Could not find lead details');
-//         return;
-//       }
-//
-//       // Optimistic remove from list
-//       newLeads.removeWhere((r) => r['id'] == requestId);
-//
-//       // Pass the FULL raw request so ActiveJobController can read everything
-//       Get.to(
-//             () => const ActiveJobScreen(),
-//         arguments: {
-//           'jobId': requestId,
-//           // ── Flat fields ──────────────────────────────────────────
-//           'customer_name': requestData['customer_name'],
-//           'address': requestData['address'],
-//           'customer_photo': requestData['customer_photo'],
-//           'service_name': requestData['service_name'],       // may be ""
-//           'service_icon': requestData['service_icon'],
-//           // ── Nested service details (for name fallback) ───────────
-//           'service_details': requestData['service_details'], // Map
-//           // ── AI cost — pass the full Map so controller can unpack ──
-//           'ai_cost': requestData['ai_cost'],                 // Map {min, max, currency}
-//           // ── Priority / chat flags ─────────────────────────────────
-//           'mark_as_priority': requestData['mark_as_priority'] ?? false,
-//           'no_call_just_chat': requestData['no_call_just_chat'] ?? false,
-//           // ── Status ────────────────────────────────────────────────
-//           'status': 'CONFIRMED',
-//           'status_display': 'Confirmed',
-//           // ── Timeline ──────────────────────────────────────────────
-//           'timeline': requestData['timeline'] ?? {},
-//         },
-//       );
-//     } catch (e) {
-//       print('❌ [ACCEPT ERROR] $e');
-//       Get.snackbar('Error', 'Could not open job screen.');
-//     }
-//   }
-//
-//   // ── Decline Request ───────────────────────────────────────────────
-//   Future<void> declineRequest(int requestId) async {
-//     try {
-//       print('❌ [DECLINE] Request ID: $requestId');
-//       newLeads.removeWhere((r) => r['id'] == requestId);
-//       Get.snackbar('Declined', 'Request declined.');
-//     } on HttpException catch (e) {
-//       Get.snackbar('Error', e.message);
-//     } catch (e) {
-//       print('❌ [DECLINE] Error: $e');
-//     }
-//   }
-//
-//   // ── Helper: icon string → asset path ─────────────────────────────
-//   static String assetFromIcon(String icon) {
-//     const map = {
-//       'water_drop': 'assets/images/profile/water.png',
-//       'bolt': 'assets/images/profile/2.png',
-//       'ac_unit': 'assets/images/profile/3.png',
-//       'palette': 'assets/images/profile/7.png',
-//       'local_shipping': 'assets/images/profile/8.png',
-//       'eco': 'assets/images/profile/12.png',
-//     };
-//     return map[icon] ?? 'assets/images/profile/water.png';
-//   }
-//
-//   // ── Helper: status string → JobStatus ────────────────────────────
-//   static JobStatus statusFromString(String status) {
-//     switch (status.toUpperCase()) {
-//       case 'COMPLETED':
-//         return JobStatus.completed;
-//       case 'IN_PROCESS':
-//       case 'IN_PROGRESS':
-//       case 'ON_THE_WAY':
-//       case 'CONFIRMED':
-//         return JobStatus.inProcess;
-//       default:
-//         return JobStatus.pending;
-//     }
-//   }
-//
-//   // ── Total count for badge ─────────────────────────────────────────
-//   int get totalCount => activeAndCompleted.length + newLeads.length;
-// }
-//
-// enum JobStatus { pending, completed, inProcess }
-
-
-
 // lib/features/professional/job_requests/controller/job_requests_controller.dart
 
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:get/get.dart';
 import 'package:handyConnect/core/endpoint/api_client.dart';
 import 'package:handyConnect/core/endpoint/api_endpoint.dart';
 import 'package:handyConnect/feature/professional/screen/active_job_screen.dart';
-
-// ← adjust this import path to match your project structure
 import 'package:handyConnect/feature/professional/controller/active_job_controller.dart';
 
+// ── Model for all available requests ──────────────────────────────
+class ServiceRequestModel {
+  final int id;
+  final String customerName;
+  final String? customerPhoto;
+  final String serviceName;
+  final String serviceIcon;
+  final Map<String, dynamic> serviceDetails;
+  final String description;
+  final String address;
+  final String zipCode;
+  final dynamic aiCost;
+  final bool markAsPriority;
+  final bool noCallJustChat;
+  final String status;
+  final String statusDisplay;
+  final bool isSold;
+  final bool isApplied;
+  final int applicationCount;
+  final String formattedDate;
+  final Map<String, dynamic> timeline;
+  final Map<String, dynamic>? assignedProviderDetails;
+  final List<Map<String, dynamic>> media;
 
+  const ServiceRequestModel({
+    required this.id,
+    required this.customerName,
+    this.customerPhoto,
+    required this.serviceName,
+    required this.serviceIcon,
+    required this.serviceDetails,
+    required this.description,
+    required this.address,
+    required this.zipCode,
+    required this.aiCost,
+    required this.markAsPriority,
+    required this.noCallJustChat,
+    required this.status,
+    required this.statusDisplay,
+    required this.isSold,
+    required this.isApplied,
+    required this.applicationCount,
+    required this.formattedDate,
+    required this.timeline,
+    this.assignedProviderDetails,
+    required this.media,
+  });
+
+  factory ServiceRequestModel.fromJson(Map<String, dynamic> json) {
+    return ServiceRequestModel(
+      id                      : json['id'] as int,
+      customerName            : (json['customer_name'] as String?) ?? 'Customer',
+      customerPhoto           : json['customer_photo'] as String?,
+      serviceName             : (json['service_name'] as String?) ?? '',
+      serviceIcon             : (json['service_icon'] as String?) ?? 'water_drop',
+      serviceDetails          : _asMap(json['service_details']),
+      description             : (json['description'] as String?) ?? '',
+      address                 : (json['address'] as String?) ?? '',
+      zipCode                 : (json['zip_code'] as String?) ?? '—',
+      aiCost                  : json['ai_cost'],
+      markAsPriority          : (json['mark_as_priority'] as bool?) ?? false,
+      noCallJustChat          : (json['no_call_just_chat'] as bool?) ?? false,
+      status                  : (json['status'] as String?) ?? 'PENDING',
+      statusDisplay           : (json['status_display'] as String?) ?? 'Pending',
+      isSold                  : (json['is_sold'] as bool?) ?? false,
+      isApplied               : (json['is_applied'] as bool?) ?? false,
+      applicationCount        : (json['application_count'] as int?) ?? 0,
+      formattedDate           : (json['formatted_date'] as String?) ?? '',
+      timeline                : _asMap(json['timeline']),
+      assignedProviderDetails : json['assigned_provider_details'] != null
+          ? _asMap(json['assigned_provider_details'])
+          : null,
+      media                   : _asList(json['media']),
+    );
+  }
+
+  static Map<String, dynamic> _asMap(dynamic v) =>
+      v is Map ? Map<String, dynamic>.from(v) : {};
+
+  static List<Map<String, dynamic>> _asList(dynamic v) {
+    if (v == null) return [];
+    return List<Map<String, dynamic>>.from(
+      (v as List).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+  }
+
+  // ── Derived helpers ────────────────────────────────────────────────
+  String get displayName {
+    if (serviceName.isNotEmpty) return serviceName;
+    final n = serviceDetails['name_en'];
+    return (n is String && n.isNotEmpty) ? n : 'Service Request';
+  }
+
+  String get formattedAiCost => JobRequestsController.formatAiCost(aiCost);
+
+  String get iconAsset => JobRequestsController.assetFromIcon(serviceIcon);
+
+  bool get canApply => !isSold && !isApplied;
+
+  JobStatus get jobStatus =>
+      JobRequestsController.statusFromString(status);
+}
+
+// ── Controller ─────────────────────────────────────────────────────
 class JobRequestsController extends GetxController {
   final ApiClient _apiClient = ApiClient(baseUrl: ApiEndpoint.baseUrl);
 
   // ── Observables ───────────────────────────────────────────────────
-  final RxBool isLoading = false.obs;
+  final RxBool isLoading                                    = false.obs;
+  final RxBool isLoadingAll                                 = false.obs;
+  final RxString errorMessage                               = ''.obs;
 
-  final RxList<Map<String, dynamic>> activeAndCompleted =
+  // Pro requests (own leads)
+  final RxList<Map<String, dynamic>> activeAndCompleted     =
       <Map<String, dynamic>>[].obs;
-  final RxList<Map<String, dynamic>> newLeads =
+  final RxList<Map<String, dynamic>> newLeads               =
       <Map<String, dynamic>>[].obs;
+
+  // All available service requests from the marketplace
+  final RxList<ServiceRequestModel> allRequests             =
+      <ServiceRequestModel>[].obs;
 
   @override
   void onInit() {
     super.onInit();
     fetchRequests();
+    fetchAllRequests();
   }
 
-  // ── Fetch All Requests ────────────────────────────────────────────
-  // GET /services/requests/pro/requests/
+  // ─────────────────────────────────────────────────────────────────
+  // GET /services/requests/pro/requests/   — own leads
+  // ─────────────────────────────────────────────────────────────────
   Future<void> fetchRequests() async {
     try {
-      isLoading.value = true;
-      print('📋 [PRO REQUESTS] Fetching...');
+      isLoading.value   = true;
+      errorMessage.value = '';
+      print('📋 [PRO REQUESTS] Fetching own leads...');
 
       final response = await _apiClient.get(
         ApiEndpoint.proRequests,
         requiresAuth: true,
       );
 
-      print('✅ [PRO REQUESTS] Response received');
-
       activeAndCompleted.value = _parseList(response['active_and_completed']);
       newLeads.value           = _parseList(response['new_leads']);
 
-      print('🔧 Active/Completed : ${activeAndCompleted.length}');
-      print('🆕 New Leads        : ${newLeads.length}');
+      print('✅ [PRO REQUESTS] Active/Completed: ${activeAndCompleted.length}'
+          ' | New Leads: ${newLeads.length}');
     } on HttpException catch (e) {
-      print('❌ [PRO REQUESTS] HttpException: ${e.message}');
-      Get.snackbar('Error', e.message);
+      print('❌ [PRO REQUESTS] ${e.message}');
+      errorMessage.value = e.message;
+      Get.snackbar('Error', e.message, snackPosition: SnackPosition.BOTTOM);
     } catch (e) {
-      print('❌ [PRO REQUESTS] Error: $e');
-      Get.snackbar('Error', 'Something went wrong.');
+      print('❌ [PRO REQUESTS] $e');
+      Get.snackbar('Error', 'Something went wrong.',
+          snackPosition: SnackPosition.BOTTOM);
     } finally {
       isLoading.value = false;
     }
   }
 
-  // ── Parse raw list ────────────────────────────────────────────────
-  List<Map<String, dynamic>> _parseList(dynamic raw) {
-    if (raw == null) return [];
-    return List<Map<String, dynamic>>.from(
-      (raw as List).map((e) => Map<String, dynamic>.from(e as Map)),
-    );
-  }
+  // ─────────────────────────────────────────────────────────────────
+  // GET /services/requests/   — all available marketplace requests
+  // ─────────────────────────────────────────────────────────────────
+  Future<void> fetchAllRequests() async {
+    try {
+      isLoadingAll.value = true;
+      print('🌐 [ALL REQUESTS] Fetching marketplace...');
 
-  // ── Format ai_cost for display only ──────────────────────────────
-  static String formatAiCost(dynamic aiCost) {
-    if (aiCost == null) return '—';
-    if (aiCost is String) return aiCost.isNotEmpty ? aiCost : '—';
-    if (aiCost is Map) {
-      final min      = aiCost['min'];
-      final max      = aiCost['max'];
-      final currency = aiCost['currency'] ?? '';
-      if (min != null && max != null) return '$currency $min – $max';
-      if (min != null) return '$currency $min';
-      if (max != null) return '$currency $max';
+      final res = await _apiClient.get(
+        ApiEndpoint.allRequests,   // → /services/requests/
+        requiresAuth: true,
+      );
+
+      final List<dynamic> raw =
+      res is List ? res : (res['results'] as List? ?? []);
+
+      allRequests.assignAll(
+        raw.map((e) => ServiceRequestModel.fromJson(
+            Map<String, dynamic>.from(e as Map))),
+      );
+
+      print('✅ [ALL REQUESTS] ${allRequests.length} request(s) loaded');
+      for (final r in allRequests) {
+        print('   [${r.id}] ${r.displayName}'
+            ' | status: ${r.status}'
+            ' | sold: ${r.isSold}'
+            ' | applied: ${r.isApplied}');
+      }
+    } on HttpException catch (e) {
+      print('❌ [ALL REQUESTS] ${e.message}');
+      Get.snackbar('Error', e.message, snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      print('❌ [ALL REQUESTS] $e');
+      Get.snackbar('Error', 'Something went wrong.',
+          snackPosition: SnackPosition.BOTTOM);
+    } finally {
+      isLoadingAll.value = false;
     }
-    return '—';
   }
 
-  // ── Accept Request → navigate to ActiveJobScreen ──────────────────
+  // ── Refresh both ──────────────────────────────────────────────────
+  Future<void> refreshAll() async {
+    await Future.wait([fetchRequests(), fetchAllRequests()]);
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Accept a lead from newLeads → navigate to ActiveJobScreen
+  // ─────────────────────────────────────────────────────────────────
   Future<void> acceptRequest(int requestId) async {
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('✅ [ACCEPT] Tapped — requestId: $requestId');
-    print('   newLeads count  : ${newLeads.length}');
-    print('   newLeads IDs    : ${newLeads.map((r) => r['id']).toList()}');
+    print('✅ [ACCEPT] requestId: $requestId');
+    print('   newLeads IDs: ${newLeads.map((r) => r['id']).toList()}');
 
-    // ── 1. Find the lead ──────────────────────────────────────────
     final requestData = newLeads.firstWhere(
           (r) => r['id'] == requestId,
       orElse: () => {},
     );
 
     if (requestData.isEmpty) {
-      print('❌ [ACCEPT] Lead ID $requestId not found in newLeads');
-      Get.snackbar(
-        'Error',
-        'Could not find lead details — try refreshing.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      print('❌ [ACCEPT] Lead $requestId not found in newLeads');
+      Get.snackbar('Error', 'Could not find lead details — try refreshing.',
+          snackPosition: SnackPosition.BOTTOM);
       return;
     }
 
     print('📦 [ACCEPT] Lead found: ${requestData['customer_name']}');
-
-    // ── 2. Optimistic remove from UI ──────────────────────────────
     newLeads.removeWhere((r) => r['id'] == requestId);
 
-    // ── 3. Build arguments ────────────────────────────────────────
     final args = <String, dynamic>{
       'jobId'            : requestId,
       'customer_name'    : requestData['customer_name'],
@@ -300,33 +254,22 @@ class JobRequestsController extends GetxController {
       'timeline'         : requestData['timeline'] ?? {},
     };
 
-    print('🗺️  [ACCEPT] Args ready — jobId: $requestId');
-
-    // ── 4. Register ActiveJobController BEFORE navigating ─────────
-    //
-    // CRITICAL: ActiveJobScreen calls Get.find<ActiveJobController>()
-    // during build. If the controller isn't registered yet the screen
-    // throws "not found" and shows the "Could not find lead" error.
-    // We must Get.put() BEFORE Get.to().
-    //
+    // Register ActiveJobController BEFORE navigating
     if (Get.isRegistered<ActiveJobController>()) {
       print('♻️  [ACCEPT] Removing stale ActiveJobController');
       await Get.delete<ActiveJobController>(force: true);
     }
     Get.put(ActiveJobController(), permanent: false);
     print('✅ [ACCEPT] ActiveJobController registered');
-
-    // ── 5. Navigate ───────────────────────────────────────────────
     print('🚀 [ACCEPT] Navigating → ActiveJobScreen');
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    Get.to(
-          () => const ActiveJobScreen(),
-      arguments: args,
-    );
+    Get.to(() => const ActiveJobScreen(), arguments: args);
   }
 
-  // ── Decline Request ───────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────
+  // Decline a lead from newLeads
+  // ─────────────────────────────────────────────────────────────────
   void declineRequest(int requestId) {
     print('❌ [DECLINE] Request ID: $requestId');
     newLeads.removeWhere((r) => r['id'] == requestId);
@@ -334,7 +277,64 @@ class JobRequestsController extends GetxController {
         snackPosition: SnackPosition.BOTTOM);
   }
 
-  // ── Helper: icon string → asset path ─────────────────────────────
+  // ─────────────────────────────────────────────────────────────────
+  // Apply to a marketplace request
+  // POST /services/requests/{id}/respond/  body: { "action": "apply" }
+  // ─────────────────────────────────────────────────────────────────
+  Future<void> applyToRequest(int requestId) async {
+    print('📝 [APPLY] requestId: $requestId');
+    try {
+      final res = await _apiClient.post(
+        ApiEndpoint.proRequestRespond(requestId),
+        body: {'action': 'apply'},
+        requiresAuth: true,
+      );
+      print('✅ [APPLY] Response: $res');
+
+      // Mark as applied locally
+      final idx = allRequests.indexWhere((r) => r.id == requestId);
+      if (idx != -1) {
+        // Refresh list to get updated state
+        fetchAllRequests();
+      }
+
+      Get.snackbar('Applied!', 'Your application has been submitted.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF43A047),
+          colorText: const Color(0xFFFFFFFF));
+    } on HttpException catch (e) {
+      print('❌ [APPLY] ${e.message}');
+      Get.snackbar('Error', e.message, snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      print('❌ [APPLY] $e');
+      Get.snackbar('Error', 'Could not apply. Please try again.',
+          snackPosition: SnackPosition.BOTTOM);
+    }
+  }
+
+  // ── Parse raw list ────────────────────────────────────────────────
+  List<Map<String, dynamic>> _parseList(dynamic raw) {
+    if (raw == null) return [];
+    return List<Map<String, dynamic>>.from(
+      (raw as List).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────
+  static String formatAiCost(dynamic aiCost) {
+    if (aiCost == null) return '—';
+    if (aiCost is String) return aiCost.isNotEmpty ? aiCost : '—';
+    if (aiCost is Map) {
+      final min      = aiCost['min'];
+      final max      = aiCost['max'];
+      final currency = aiCost['currency'] ?? '';
+      if (min != null && max != null) return '$currency $min – $max';
+      if (min != null) return '$currency $min';
+      if (max != null) return '$currency $max';
+    }
+    return '—';
+  }
+
   static String assetFromIcon(String icon) {
     const map = {
       'water_drop'     : 'assets/images/profile/water.png',
@@ -347,7 +347,6 @@ class JobRequestsController extends GetxController {
     return map[icon] ?? 'assets/images/profile/water.png';
   }
 
-  // ── Helper: status string → JobStatus ────────────────────────────
   static JobStatus statusFromString(String status) {
     switch (status.toUpperCase()) {
       case 'COMPLETED':
@@ -362,7 +361,6 @@ class JobRequestsController extends GetxController {
     }
   }
 
-  // ── Total count for badge ─────────────────────────────────────────
   int get totalCount => activeAndCompleted.length + newLeads.length;
 }
 
