@@ -6,8 +6,6 @@ import 'package:get/get.dart';
 import 'package:handyConnect/feature/onboarding/controller/onboarding_controller.dart';
 import 'package:handyConnect/feature/onboarding/screen/onboarding_screen.dart';
 
-
-
 class Screen3SetupServices extends StatelessWidget {
   final VoidCallback onNext;
   const Screen3SetupServices({super.key, required this.onNext});
@@ -15,15 +13,6 @@ class Screen3SetupServices extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = OnboardingController.to;
-
-    final List<Map<String, dynamic>> categories = [
-      {'name': 'Plumbing', 'icon': '💧'},
-      {'name': 'Electrical', 'icon': '⚡'},
-      {'name': 'Ac & HVAC', 'icon': '❄️'},
-      {'name': 'Painting', 'icon': '🎨'},
-      {'name': 'Moving', 'icon': '🚚'},
-      {'name': 'Gardening', 'icon': '🌿'},
-    ];
 
     return BaseScreen(
       step: 2,
@@ -46,13 +35,14 @@ class Screen3SetupServices extends StatelessWidget {
             ),
             SizedBox(height: 16.h),
 
-            // Business Address field
+            // ── Business Address ──────────────────────────────────
             Text(
               'Business Address',
               style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15.sp,
-                  color: kTextDark),
+                fontWeight: FontWeight.w600,
+                fontSize: 15.sp,
+                color: kTextDark,
+              ),
             ),
             SizedBox(height: 8.h),
             Container(
@@ -75,69 +65,119 @@ class Screen3SetupServices extends StatelessWidget {
             ),
             SizedBox(height: 20.h),
 
-            // Categories
+            // ── Categories from API ───────────────────────────────
             Text(
               'Select categories',
               style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15.sp,
-                  color: kTextDark),
+                fontWeight: FontWeight.w600,
+                fontSize: 15.sp,
+                color: kTextDark,
+              ),
             ),
             SizedBox(height: 12.h),
-            Obx(() => GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 10.w,
-              mainAxisSpacing: 10.h,
-              childAspectRatio: 1.1,
-              children: categories.map((cat) {
-                final isSelected =
-                c.selectedCategories.contains(cat['name']);
-                return GestureDetector(
-                  onTap: () =>
-                      c.toggleCategory(cat['name'] as String),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: isSelected ? kPrimary : kBorderGrey,
-                        width: isSelected ? 2.w : 1.w,
-                      ),
-                      borderRadius: BorderRadius.circular(12.r),
-                      color: isSelected ? kPrimaryLight : Colors.white,
-                    ),
+
+            Obx(() {
+              // Show loader while fetching
+              if (c.isLoadingServices.value) {
+                return SizedBox(
+                  height: 120.h,
+                  child: const Center(
+                    child: CircularProgressIndicator(color: kPrimary),
+                  ),
+                );
+              }
+
+              // Show error state with retry
+              if (c.availableServices.isEmpty) {
+                return SizedBox(
+                  height: 120.h,
+                  child: Center(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          cat['icon'] as String,
-                          style: TextStyle(fontSize: 28.sp),
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          cat['name'] as String,
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w500,
-                            color:
-                            isSelected ? kPrimary : kTextDark,
+                        Text('Could not load services.',
+                            style: TextStyle(
+                                color: kTextGrey, fontSize: 13.sp)),
+                        SizedBox(height: 8.h),
+                        GestureDetector(
+                          onTap: () => c.fetchServices(),
+                          child: Text(
+                            'Tap to retry',
+                            style: TextStyle(
+                              color: kPrimary,
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                 );
-              }).toList(),
-            )),
+              }
+
+              // Grid from API data
+              return GridView.count(
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 10.w,
+                mainAxisSpacing: 10.h,
+                childAspectRatio: 1.1,
+                children: c.availableServices.map((service) {
+                  final int    id       = service['id'] as int;
+                  final String nameEn   = service['name_en'] ?? '';
+                  final String icon     = service['icon'] ?? '🔧';
+                  final bool   selected = c.isSelected(id);
+
+                  return GestureDetector(
+                    onTap: () => c.toggleService(id),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: selected ? kPrimary : kBorderGrey,
+                          width: selected ? 2.w : 1.w,
+                        ),
+                        borderRadius: BorderRadius.circular(12.r),
+                        color: selected ? kPrimaryLight : Colors.white,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            icon,
+                            style: TextStyle(fontSize: 28.sp),
+                          ),
+                          SizedBox(height: 4.h),
+                          Text(
+                            nameEn,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w500,
+                              color: selected ? kPrimary : kTextDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              );
+            }),
+
             SizedBox(height: 20.h),
 
-            // Pricing toggle
+            // ── Pricing toggle ────────────────────────────────────
             Text(
               'Pricing',
               style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15.sp,
-                  color: kTextDark),
+                fontWeight: FontWeight.w600,
+                fontSize: 15.sp,
+                color: kTextDark,
+              ),
             ),
             SizedBox(height: 10.h),
             Obx(() => Container(
@@ -153,15 +193,13 @@ class Screen3SetupServices extends StatelessWidget {
                         child: GestureDetector(
                           onTap: () => c.isHourly.value = true,
                           child: Container(
-                            padding:
-                            EdgeInsets.symmetric(vertical: 10.h),
+                            padding: EdgeInsets.symmetric(vertical: 10.h),
                             margin: EdgeInsets.all(4.w),
                             decoration: BoxDecoration(
                               color: c.isHourly.value
                                   ? kPrimary
                                   : Colors.transparent,
-                              borderRadius:
-                              BorderRadius.circular(8.r),
+                              borderRadius: BorderRadius.circular(8.r),
                             ),
                             alignment: Alignment.center,
                             child: Text(
@@ -181,15 +219,13 @@ class Screen3SetupServices extends StatelessWidget {
                         child: GestureDetector(
                           onTap: () => c.isHourly.value = false,
                           child: Container(
-                            padding:
-                            EdgeInsets.symmetric(vertical: 10.h),
+                            padding: EdgeInsets.symmetric(vertical: 10.h),
                             margin: EdgeInsets.all(4.w),
                             decoration: BoxDecoration(
                               color: !c.isHourly.value
                                   ? kPrimary
                                   : Colors.transparent,
-                              borderRadius:
-                              BorderRadius.circular(8.r),
+                              borderRadius: BorderRadius.circular(8.r),
                             ),
                             alignment: Alignment.center,
                             child: Text(
@@ -208,8 +244,7 @@ class Screen3SetupServices extends StatelessWidget {
                     ],
                   ),
                   Padding(
-                    padding:
-                    EdgeInsets.fromLTRB(12.w, 4.h, 12.w, 12.h),
+                    padding: EdgeInsets.fromLTRB(12.w, 4.h, 12.w, 12.h),
                     child: Container(
                       padding: EdgeInsets.symmetric(
                           horizontal: 12.w, vertical: 10.h),
@@ -230,9 +265,10 @@ class Screen3SetupServices extends StatelessWidget {
                                   fontWeight: FontWeight.w600)),
                           const Spacer(),
                           Text(
-                              c.isHourly.value ? '/hour' : '/job',
-                              style: TextStyle(
-                                  color: kTextGrey, fontSize: 13.sp)),
+                            c.isHourly.value ? '/hour' : '/job',
+                            style: TextStyle(
+                                color: kTextGrey, fontSize: 13.sp),
+                          ),
                         ],
                       ),
                     ),
@@ -242,13 +278,14 @@ class Screen3SetupServices extends StatelessWidget {
             )),
             SizedBox(height: 20.h),
 
-            // Service Area radius
+            // ── Service Area radius ───────────────────────────────
             Text(
               'Service Area',
               style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15.sp,
-                  color: kTextDark),
+                fontWeight: FontWeight.w600,
+                fontSize: 15.sp,
+                color: kTextDark,
+              ),
             ),
             SizedBox(height: 12.h),
             Obx(() => Container(
@@ -271,12 +308,15 @@ class Screen3SetupServices extends StatelessWidget {
                           Text(
                             'Radius: ${c.serviceRadius.value.toInt()} Km',
                             style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14.sp),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14.sp,
+                            ),
                           ),
-                          Text('Coverage area from your location',
-                              style: TextStyle(
-                                  color: kTextGrey, fontSize: 12.sp)),
+                          Text(
+                            'Coverage area from your location',
+                            style: TextStyle(
+                                color: kTextGrey, fontSize: 12.sp),
+                          ),
                         ],
                       ),
                     ],
@@ -311,11 +351,10 @@ class Screen3SetupServices extends StatelessWidget {
           ],
         ),
       ),
-      // Button shows spinner while API is in-flight
       bottomButton: Obx(() => PrimaryButton(
         label: 'Submit Application',
         isLoading: c.isLoading.value,
-        onTap: onNext, // onNext calls submitOnboarding() in Onboarding widget
+        onTap: onNext,
       )),
     );
   }

@@ -20,18 +20,16 @@ class ApiEndpoint {
   static const String recentRequests      = "/services/recent-requests/";
   static const String provider            = "/services/providers/";
   static const String requests            = "/services/requests/";
+  static const String initializeRequest  = '/services/requests/initialize/';
+  static const String createRequest      = '/services/requests/';
+  static const String uploadMedia        = '/services/media/upload/';
 
 
 
 
 
 
-  // ─── Service Requests ──────────────────────────────────────────────
-  /// POST  body: { service, description, address, zip_code, phone_number, ... }
-  static const String createRequest = "/services/requests/";
 
-  /// POST  multipart: fields={request: id}, files={file: File}
-  static const String uploadMedia   = "/services/media/upload/";
 
   /// POST  /services/requests/{id}/send-offer/
   static String sendOffer(int requestId) =>
@@ -47,6 +45,7 @@ class ApiEndpoint {
 
   // ─── Provider ──────────────────────────────────────────────────────
   static const String proHomepage        = "/services/requests/pro/homepage/";
+  static const String servicesList = '/services/list/';
 
   static const String proRequests        = "/services/requests/pro/requests/";
   static const String providerOnboarding = "/pro/onboarding/";

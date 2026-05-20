@@ -27,7 +27,7 @@ class MyApp extends StatelessWidget {
         return GetMaterialApp(
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
-          initialRoute: RouteName.chat,
+          initialRoute: RouteName.onboarding,
           getPages: AppRoute.pages,
           // home: const SplashScreen(),
         );

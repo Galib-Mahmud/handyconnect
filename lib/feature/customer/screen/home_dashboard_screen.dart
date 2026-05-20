@@ -10,8 +10,6 @@ import '../controller/home_dashboard_controller.dart';
 import 'customer_in_progress_screen.dart';
 import 'notification_screen.dart';
 
-
-
 class HomeDashboardScreen extends StatelessWidget {
   const HomeDashboardScreen({super.key});
 
@@ -62,7 +60,6 @@ class HomeDashboardScreen extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 20.w),
       child: Row(
         children: [
-          // Profile Avatar with first letter
           Obx(() {
             final name = ctrl.profile.value?['full_name'] ?? '';
             return Container(
@@ -85,7 +82,6 @@ class HomeDashboardScreen extends StatelessWidget {
             );
           }),
           SizedBox(width: 12.w),
-          // Greeting + Name
           Expanded(
             child: Obx(() {
               final name = ctrl.profile.value?['full_name'] ?? 'User';
@@ -113,7 +109,6 @@ class HomeDashboardScreen extends StatelessWidget {
               );
             }),
           ),
-          // Notification Icon
           GestureDetector(
             onTap: () {
               ctrl.fetchNotifications();
@@ -140,11 +135,7 @@ class HomeDashboardScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(
-            color: const Color(0xFFE0E0E0),
-            width: 1,
-          ),
-          // ✅ কোনো boxShadow নেই — plain white
+          border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
         ),
         child: Row(
           children: [
@@ -162,13 +153,13 @@ class HomeDashboardScreen extends StatelessWidget {
                   hintText: 'What do you need help with?',
                   hintStyle: TextStyle(
                     fontSize: 14.sp,
-                    color: const Color(0xFFBDBDBD), // ✅ light grey
+                    color: const Color(0xFFBDBDBD),
                     fontWeight: FontWeight.w400,
                   ),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
-                  fillColor: Colors.white,  // ✅ white background
+                  fillColor: Colors.white,
                   filled: true,
                 ),
                 style: TextStyle(
@@ -177,11 +168,7 @@ class HomeDashboardScreen extends StatelessWidget {
                 ),
               ),
             ),
-            Icon(
-              Icons.search,
-              color: const Color(0xFFBDBDBD),
-              size: 22.sp,
-            ),
+            Icon(Icons.search, color: const Color(0xFFBDBDBD), size: 22.sp),
           ],
         ),
       ),
@@ -239,7 +226,10 @@ class HomeDashboardScreen extends StatelessWidget {
             child: Center(
               child: Text(
                 'No recent requests',
-                style: TextStyle(fontSize: 14.sp, color: const Color(0xFF9E9E9E)),
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: const Color(0xFF9E9E9E),
+                ),
               ),
             ),
           ),
@@ -286,7 +276,8 @@ class HomeDashboardScreen extends StatelessWidget {
             return _buildServiceCard(
               category: category,
               onTap: () {
-                Get.toNamed( RouteName.newRequest,
+                Get.toNamed(
+                  RouteName.newRequest,
                   arguments: {'serviceId': category['id']},
                 );
               },
@@ -297,14 +288,61 @@ class HomeDashboardScreen extends StatelessWidget {
     });
   }
 
-  // ───────────────────── Request Card (shared) ───────────────────────
+  // ───────────────────── Dynamic Icon Widget ─────────────────────────
+  /// Renders an emoji string in a colored circle, or falls back to an asset image.
+  Widget _buildIconWidget({
+    required String icon,
+    String? colorHex,
+    required double size,
+    bool isCircle = false,
+  }) {
+    final bool emoji = HomeController.isEmoji(icon);
+
+    if (emoji) {
+      Color bgColor = const Color(0xFFE0E0E0);
+      if (colorHex != null && colorHex.isNotEmpty) {
+        try {
+          final hex = colorHex.replaceAll('#', '');
+          bgColor = Color(int.parse('FF$hex', radix: 16));
+        } catch (_) {}
+      }
+
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: bgColor.withOpacity(0.15),
+          shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
+          borderRadius: isCircle ? null : BorderRadius.circular(10.r),
+        ),
+        child: Center(
+          child: Text(
+            icon,
+            style: TextStyle(fontSize: (size * 0.5).sp),
+          ),
+        ),
+      );
+    }
+
+    // Fallback: named asset string
+    final assetPath = HomeController.assetFromString(icon);
+    return Image.asset(
+      assetPath,
+      width: size.w,
+      height: size.w,
+      fit: BoxFit.contain,
+    );
+  }
+
+  // ───────────────────── Request Card ────────────────────────────────
   Widget _buildRequestCard(Map<String, dynamic> item) {
     final status      = item['status'] ?? 'PENDING';
     final displayText = item['display_text'] ?? '';
     final serviceName = item['service_name']?.toString().isNotEmpty == true
         ? item['service_name']
         : 'Service Request';
-    final assetPath   = HomeController.assetFromString(item['service_icon'] ?? '');
+    final icon      = item['service_icon'] ?? '';
+    final colorHex  = item['service_color'] as String?;
 
     return GestureDetector(
       onTap: () => Get.to(() => const CustomerInProgressScreen()),
@@ -324,12 +362,12 @@ class HomeDashboardScreen extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Asset Image
-            Image.asset(
-              assetPath,
-              width: 36.w,
-              height: 36.w,
-              fit: BoxFit.contain,
+            // Dynamic Icon
+            _buildIconWidget(
+              icon: icon,
+              colorHex: colorHex,
+              size: 40,
+              isCircle: true,
             ),
             SizedBox(width: 14.w),
             // Title + Date
@@ -383,8 +421,9 @@ class HomeDashboardScreen extends StatelessWidget {
     required Map<String, dynamic> category,
     VoidCallback? onTap,
   }) {
-    final assetPath = HomeController.assetFromString(category['icon'] ?? '');
-    final label     = category['name_en'] ?? '';
+    final icon     = category['icon'] ?? '';
+    final label    = category['name_en'] ?? '';
+    final colorHex = category['color'] as String?;
 
     return GestureDetector(
       onTap: onTap,
@@ -397,11 +436,11 @@ class HomeDashboardScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(
-              assetPath,
-              width: 44.w,
-              height: 44.w,
-              fit: BoxFit.contain,
+            _buildIconWidget(
+              icon: icon,
+              colorHex: colorHex,
+              size: 48,
+              isCircle: false,
             ),
             SizedBox(height: 8.h),
             Text(

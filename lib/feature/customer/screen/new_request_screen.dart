@@ -1,3 +1,8 @@
+// lib/features/home/views/new_request_screen.dart
+//
+// KEY FIX: serviceId is now read from Get.arguments (set by home_dashboard_screen
+// when the user taps a category card). The hardcoded default of `1` is gone.
+
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -7,8 +12,7 @@ import 'package:get/get.dart';
 import '../controller/new_request_controller.dart';
 
 class NewRequestScreen extends StatefulWidget {
-  final int serviceId;
-  const NewRequestScreen({super.key, this.serviceId = 1});
+  const NewRequestScreen({super.key});
 
   @override
   State<NewRequestScreen> createState() => _NewRequestScreenState();
@@ -21,11 +25,28 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
   final TextEditingController _phoneController       = TextEditingController();
 
   late final RequestController _ctrl;
+  late final int _serviceId;  // ← read from route arguments, never hardcoded
 
   @override
   void initState() {
     super.initState();
     _ctrl = Get.put(RequestController());
+
+    // ── Read serviceId from navigation arguments ──────────────────
+    // Set in home_dashboard_screen.dart:
+    //   Get.toNamed(RouteName.newRequest, arguments: {'serviceId': category['id']})
+    final args = Get.arguments as Map<String, dynamic>?;
+    _serviceId = args?['serviceId'] as int? ?? 0;
+
+    print('🆔 [NEW REQUEST] serviceId from args: $_serviceId');
+
+    // Guard: if somehow 0 slipped through, go back immediately
+    if (_serviceId == 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.back();
+        Get.snackbar('Error', 'Invalid service. Please try again.');
+      });
+    }
   }
 
   @override
@@ -67,7 +88,6 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
                     _buildUploadArea(),
                     SizedBox(height: 12.h),
 
-                    // ── Selected Images Preview ──────────────────
                     Obx(() => _ctrl.selectedImages.isNotEmpty
                         ? _buildImagePreview()
                         : const SizedBox.shrink()),
@@ -109,15 +129,12 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
 
                     SizedBox(height: 20.h),
 
-                    // ── Can Call Card ────────────────────────────
                     Obx(() => _buildCanCallCard()),
                     SizedBox(height: 16.h),
 
-                    // ── Emergency Card ───────────────────────────
                     Obx(() => _buildEmergencyCard()),
                     SizedBox(height: 24.h),
 
-                    // ── Continue Button ──────────────────────────
                     Obx(() => _buildContinueButton()),
                     SizedBox(height: 30.h),
                   ],
@@ -265,8 +282,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
                       color: Colors.black54,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.close,
-                        color: Colors.white, size: 14.sp),
+                    child: Icon(Icons.close, color: Colors.white, size: 14.sp),
                   ),
                 ),
               ),
@@ -348,9 +364,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
                         TextSpan(
                           text: '(Recommended)',
                           style: TextStyle(
-                            fontSize: 13.sp,
-                            color: const Color(0xFF4CAF50),
-                          ),
+                              fontSize: 13.sp, color: const Color(0xFF4CAF50)),
                         ),
                       ],
                     ),
@@ -453,10 +467,10 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
       onTap: _ctrl.isLoading.value
           ? null
           : () => _ctrl.submitRequest(
-        serviceId: widget.serviceId,
+        serviceId  : _serviceId,   // ← real id from route args
         description: _descriptionController.text,
-        address: _addressController.text,
-        zipCode: _zipController.text,
+        address    : _addressController.text,
+        zipCode    : _zipController.text,
         phoneNumber: _phoneController.text,
       ),
       child: Container(
@@ -532,9 +546,8 @@ class _DashedBorderPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) {
-    return oldDelegate.color != color ||
-        oldDelegate.strokeWidth != strokeWidth ||
-        oldDelegate.borderRadius != borderRadius;
-  }
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) =>
+      oldDelegate.color != color ||
+          oldDelegate.strokeWidth != strokeWidth ||
+          oldDelegate.borderRadius != borderRadius;
 }

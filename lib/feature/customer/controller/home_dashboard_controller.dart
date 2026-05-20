@@ -1,17 +1,15 @@
-// lib/features/home/controller/home_controller.dart
+// lib/features/home/controller/home_dashboard_controller.dart
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:handyConnect/core/endpoint/api_client.dart';
 import 'package:handyConnect/core/endpoint/api_endpoint.dart';
 
-
-
 class HomeController extends GetxController {
   final ApiClient _apiClient = ApiClient(baseUrl: ApiEndpoint.baseUrl);
 
   // ── Observables ───────────────────────────────────────────────────
-  final RxBool isLoading   = false.obs;
+  final RxBool   isLoading   = false.obs;
   final RxString searchQuery = ''.obs;
 
   // ── Data ──────────────────────────────────────────────────────────
@@ -54,7 +52,6 @@ class HomeController extends GetxController {
       print('👤 Profile    : ${profile.value}');
       print('📋 Recent     : ${recentRequests.length} items');
       print('🗂  Categories : ${categories.length} items');
-
     } on HttpException catch (e) {
       print('❌ [HOME] HttpException: ${e.message}');
       Get.snackbar('Error', e.message);
@@ -88,7 +85,6 @@ class HomeController extends GetxController {
       }
 
       print('📋 Total requests: ${allRequests.length}');
-
     } on HttpException catch (e) {
       print('❌ [ALL REQUESTS] HttpException: ${e.message}');
       Get.snackbar('Error', e.message);
@@ -118,7 +114,6 @@ class HomeController extends GetxController {
       }
 
       print('🔔 Total notifications: ${notifications.length}');
-
     } on HttpException catch (e) {
       print('❌ [NOTIFICATIONS] Error: ${e.message}');
     } catch (e) {
@@ -126,7 +121,16 @@ class HomeController extends GetxController {
     }
   }
 
-  // ── Helper: icon string → asset path ─────────────────────────────
+  // ── Helper: Detect Emoji ──────────────────────────────────────────
+  /// Returns true if the string contains emoji characters (Unicode > U+00FF),
+  /// meaning the API sent an emoji icon rather than a named asset string.
+  static bool isEmoji(String value) {
+    if (value.isEmpty) return false;
+    // Any character above the basic Latin/extended-Latin range is treated as emoji
+    return value.runes.any((rune) => rune > 0x00FF);
+  }
+
+  // ── Helper: icon string → asset path (legacy named icons) ─────────
   static String assetFromString(String icon) {
     const map = {
       'water_drop'     : 'assets/images/profile/water.png',
@@ -137,6 +141,18 @@ class HomeController extends GetxController {
       'eco'            : 'assets/images/profile/12.png',
     };
     return map[icon] ?? 'assets/images/profile/water.png';
+  }
+
+  // ── Helper: Parse hex color string → Color ────────────────────────
+  /// Safely parses a hex string like "#F54927" into a Flutter Color.
+  static Color? parseColor(String? hex) {
+    if (hex == null || hex.isEmpty) return null;
+    try {
+      final cleaned = hex.replaceAll('#', '');
+      return Color(int.parse('FF$cleaned', radix: 16));
+    } catch (_) {
+      return null;
+    }
   }
 
   // ── Helper: status → text color ──────────────────────────────────
