@@ -8,6 +8,8 @@ import 'package:handyConnect/feature/extra/controller/report_issue_controller.da
 import 'package:handyConnect/feature/professional/controller/professional_home_controller.dart';
 import 'package:handyConnect/feature/professional/screen/active_job_screen.dart';
 
+import '../main_screen_1.dart';
+
 
 
 class ProfessionalHomeScreen extends StatelessWidget {
@@ -50,6 +52,10 @@ class ProfessionalHomeScreen extends StatelessWidget {
                   Obx(() => _buildSectionHeader(
                     title: 'Active Jobs',
                     badge: c.activeJobs.length.toString(),
+                    showViewAll: c.activeJobs.isNotEmpty,
+                    onViewAll: () {
+                      Get.offAll(() => MainScreen1(initialIndex: 1)); // Rebuilds with correct tab
+                    },
                   )),
                   SizedBox(height: 10.h),
                   Obx(() {
@@ -70,7 +76,9 @@ class ProfessionalHomeScreen extends StatelessWidget {
                     title: 'Emergency Request',
                     badge: c.emergencyRequests.length.toString(),
                     showViewAll: c.emergencyRequests.isNotEmpty,
-                    onViewAll: () {},
+                    onViewAll: () {
+                      Get.offAll(() => MainScreen1(initialIndex: 1)); // Rebuilds with correct tab
+                    },
                   )),
                   SizedBox(height: 10.h),
                   Obx(() {
@@ -94,7 +102,9 @@ class ProfessionalHomeScreen extends StatelessWidget {
                     title: 'New Requests',
                     badge: c.newRequests.length.toString(),
                     showViewAll: c.newRequests.isNotEmpty,
-                    onViewAll: () {},
+                    onViewAll: () {
+                      Get.offAll(() => MainScreen1(initialIndex: 1)); // Rebuilds with correct tab
+                    },
                   )),
                   SizedBox(height: 10.h),
                   Obx(() {

@@ -3,12 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:handyConnect/feature/professional/controller/job_request_controller.dart';
-
+import 'package:handyConnect/feature/professional/screen/active_job_screen.dart';
 import '../../../core/local_storage/user_info.dart';
-import '../../../route/route_name.dart';
 import '../../chat/controller/chat_controller.dart';
 import '../../chat/screen/chat_screen.dart';
+import '../controller/job_request_controller.dart';
 
 class JobRequestsScreen extends StatelessWidget {
   const JobRequestsScreen({super.key});
@@ -17,69 +16,28 @@ class JobRequestsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Get.put(JobRequestsController());
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF0F4F4),
-        body: SafeArea(
-          child: Column(
-            children: [
-              SizedBox(height: 16.h),
-              _buildHeader(c),
-              SizedBox(height: 12.h),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF0F4F4),
+      body: SafeArea(
+        child: Column(
+          children: [
+            SizedBox(height: 16.h),
+            _buildHeader(c),
+            SizedBox(height: 12.h),
 
-              // ── Tab Bar ─────────────────────────────────────────
-              Container(
-                margin: EdgeInsets.symmetric(horizontal: 16.w),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: TabBar(
-                  indicator: BoxDecoration(
-                    color: const Color(0xFFF8C106),
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: const Color(0xFF9E9E9E),
-                  labelStyle: TextStyle(
-                      fontSize: 13.sp, fontWeight: FontWeight.w700),
-                  unselectedLabelStyle:
-                  TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w500),
-                  padding: EdgeInsets.all(4.w),
-                  tabs: [
-                    Tab(text: 'My Leads'),
-                    Tab(text: 'All Requests'),
-                  ],
-                ),
-              ),
+            // ── Scrollable Filter Chips ─────────────────────────────
+            _buildFilterChips(c),
+            SizedBox(height: 12.h),
 
-              SizedBox(height: 12.h),
-
-              // ── Tab Views ────────────────────────────────────────
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    _MyLeadsTab(c: c),
-                    _AllRequestsTab(c: c),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            // ── Request List ────────────────────────────────────────
+            Expanded(child: _buildRequestList(c)),
+          ],
         ),
       ),
     );
   }
 
+  // ── Header with Title & Refresh ───────────────────────────────────
   Widget _buildHeader(JobRequestsController c) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -87,8 +45,7 @@ class JobRequestsScreen extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: () => Get.back(),
-            child: Icon(Icons.arrow_back,
-                size: 22.sp, color: const Color(0xFF212121)),
+            child: Icon(Icons.arrow_back, size: 22.sp, color: const Color(0xFF212121)),
           ),
           SizedBox(width: 14.w),
           Text(
@@ -100,164 +57,237 @@ class JobRequestsScreen extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          // Refresh button
-          GestureDetector(
-            onTap: c.refreshAll,
-            child: Icon(Icons.refresh,
-                size: 22.sp, color: const Color(0xFF212121)),
-          ),
-          SizedBox(width: 12.w),
-          // Badge
-          Obx(() => Container(
-            width: 30.w,
-            height: 30.w,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFF8E1),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '${c.totalCount}',
-              style: TextStyle(
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFFF8C106),
-              ),
+          // Refresh
+          Obx(() => GestureDetector(
+            onTap: c.isLoading.value ? null : c.refreshCurrent,
+            child: Icon(
+              c.isLoading.value ? Icons.hourglass_bottom : Icons.refresh,
+              size: 22.sp,
+              color: c.isLoading.value ? const Color(0xFF9E9E9E) : const Color(0xFF212121),
             ),
           )),
         ],
       ),
     );
   }
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB 1 — My Leads (own active + new leads)
-// ─────────────────────────────────────────────────────────────────────────────
-class _MyLeadsTab extends StatelessWidget {
-  const _MyLeadsTab({required this.c});
-  final JobRequestsController c;
+  // ── Scrollable Filter Chips ───────────────────────────────────────
+  Widget _buildFilterChips(JobRequestsController c) {
+    final filters = [
+      {'type': RequestFilterType.active, 'label': 'Active', 'icon': Icons.check_circle_outline},
+      {'type': RequestFilterType.private, 'label': 'Private', 'icon': Icons.lock_outline},
+      {'type': RequestFilterType.emergency, 'label': 'Emergency', 'icon': Icons.warning_amber_rounded},
+      {'type': RequestFilterType.newRequest, 'label': 'New', 'icon': Icons.new_releases},
+    ];
 
-  @override
-  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44.h,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        itemCount: filters.length,
+        separatorBuilder: (_, __) => SizedBox(width: 10.w),
+        itemBuilder: (_, index) {
+          final filter = filters[index];
+          final type = filter['type'] as RequestFilterType;
+          final label = filter['label'] as String;
+          final icon = filter['icon'] as IconData;
+
+          return Obx(() {
+            final isSelected = c.selectedFilter.value == type;
+            return _FilterChip(
+              label: label,
+              icon: icon,
+              isSelected: isSelected,
+              onTap: () => c.changeFilter(type),
+            );
+          });
+        },
+      ),
+    );
+  }
+
+  // ── Request List with Loading/Empty States ────────────────────────
+  Widget _buildRequestList(JobRequestsController c) {
     return Obx(() {
-      if (c.isLoading.value &&
-          c.activeAndCompleted.isEmpty &&
-          c.newLeads.isEmpty) {
+      // Loading state (first load)
+      if (c.isLoading.value && c.currentList.isEmpty) {
         return const Center(
           child: CircularProgressIndicator(color: Color(0xFFF8C106)),
         );
       }
 
-      if (c.activeAndCompleted.isEmpty && c.newLeads.isEmpty) {
-        return _buildEmpty('No job requests at the moment.');
+      // Empty state
+      if (c.currentList.isEmpty) {
+        return _buildEmptyState(c.selectedFilter.value);
       }
 
-      return RefreshIndicator(
-        color: const Color(0xFFF8C106),
-        onRefresh: c.fetchRequests,
-        child: ListView(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+      // List with pull-to-refresh & pagination
+      return NotificationListener<ScrollNotification>(
+        onNotification: (scrollInfo) {
+          if (!c.isLoading.value &&
+              scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent * 0.8 &&
+              c.hasMore) {
+            c.loadMore(c.selectedFilter.value);
+          }
+          return false;
+        },
+        child: RefreshIndicator(
+          color: const Color(0xFFF8C106),
+          onRefresh: c.refreshCurrent,
+          child: ListView.separated(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+            itemCount: c.currentList.length + (c.hasMore ? 1 : 0),
+            separatorBuilder: (_, __) => SizedBox(height: 12.h),
+            itemBuilder: (_, index) {
+              // Pagination loader at end
+              if (index == c.currentList.length) {
+                return Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                  child: Center(
+                    child: SizedBox(
+                      width: 24.w,
+                      height: 24.w,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: const Color(0xFFF8C106),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              final request = c.currentList[index];
+              return _RequestCard(
+                request: request,
+                filterType: c.selectedFilter.value,
+                onAccept: () => c.acceptRequest(request.id),
+                onDecline: () => c.declineRequest(request.id),
+              );
+            },
+          ),
+        ),
+      );
+    });
+  }
+
+  // ── Empty State per Filter ────────────────────────────────────────
+  Widget _buildEmptyState(RequestFilterType type) {
+    final config = {
+      RequestFilterType.active: {'msg': 'No active requests', 'icon': Icons.work_outline},
+      RequestFilterType.private: {'msg': 'No private requests', 'icon': Icons.lock_outline},
+      RequestFilterType.emergency: {'msg': 'No emergency requests', 'icon': Icons.warning_amber},
+      RequestFilterType.newRequest: {'msg': 'No new requests', 'icon': Icons.new_releases},
+    }[type]!;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(config['icon'] as IconData, size: 64.sp, color: const Color(0xFFBDBDBD)),
+          SizedBox(height: 16.h),
+          Text(
+            config['msg'] as String,
+            style: TextStyle(fontSize: 14.sp, color: const Color(0xFF9E9E9E)),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'Pull down to refresh',
+            style: TextStyle(fontSize: 12.sp, color: const Color(0xFFBDBDBD)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Reusable Filter Chip Widget ─────────────────────────────────────
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFF8C106) : Colors.white,
+          borderRadius: BorderRadius.circular(24.r),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFF8C106) : const Color(0xFFE0E0E0),
+          ),
+          boxShadow: isSelected
+              ? [
+            BoxShadow(
+              color: const Color(0xFFF8C106).withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            if (c.activeAndCompleted.isNotEmpty) ...[
-              _sectionLabel('Active & Completed'),
-              SizedBox(height: 10.h),
-              ...c.activeAndCompleted.map((r) => Padding(
-                padding: EdgeInsets.only(bottom: 14.h),
-                child: _JobRequestCard(
-                  request : r,
-                  status  : JobRequestsController.statusFromString(
-                      r['status'] ?? ''),
-                  onAccept : () => c.acceptRequest(r['id']),
-                  onDecline: () => c.declineRequest(r['id']),
-                ),
-              )),
-              SizedBox(height: 8.h),
-            ],
-            if (c.newLeads.isNotEmpty) ...[
-              _sectionLabel('New Leads'),
-              SizedBox(height: 10.h),
-              ...c.newLeads.map((r) => Padding(
-                padding: EdgeInsets.only(bottom: 14.h),
-                child: _JobRequestCard(
-                  request : r,
-                  status  : JobRequestsController.statusFromString(
-                      r['status'] ?? ''),
-                  onAccept : () => c.acceptRequest(r['id']),
-                  onDecline: () => c.declineRequest(r['id']),
-                ),
-              )),
-            ],
-            SizedBox(height: 20.h),
+            Icon(
+              icon,
+              size: 16.sp,
+              color: isSelected ? Colors.white : const Color(0xFF9E9E9E),
+            ),
+            SizedBox(width: 6.w),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13.sp,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? Colors.white : const Color(0xFF212121),
+              ),
+            ),
           ],
         ),
-      );
-    });
+      ),
+    );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB 2 — All Available Requests (marketplace)
-// ─────────────────────────────────────────────────────────────────────────────
-class _AllRequestsTab extends StatelessWidget {
-  const _AllRequestsTab({required this.c});
-  final JobRequestsController c;
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      if (c.isLoadingAll.value && c.allRequests.isEmpty) {
-        return const Center(
-          child: CircularProgressIndicator(color: Color(0xFFF8C106)),
-        );
-      }
-
-      if (c.allRequests.isEmpty) {
-        return _buildEmpty('No available requests right now.');
-      }
-
-      return RefreshIndicator(
-        color: const Color(0xFFF8C106),
-        onRefresh: c.fetchAllRequests,
-        child: ListView.builder(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-          itemCount: c.allRequests.length,
-          itemBuilder: (_, index) {
-            final r = c.allRequests[index];
-            return Padding(
-              padding: EdgeInsets.only(bottom: 14.h),
-              child: _AllRequestCard(
-                request : r,
-                onApply : () => c.applyToRequest(r.id),
-              ),
-            );
-          },
-        ),
-      );
-    });
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// All Request Card — from GET /services/requests/
-// ─────────────────────────────────────────────────────────────────────────────
-class _AllRequestCard extends StatelessWidget {
-  const _AllRequestCard({required this.request, required this.onApply});
+// ── Request Card Widget ─────────────────────────────────────────────
+class _RequestCard extends StatelessWidget {
   final ServiceRequestModel request;
-  final VoidCallback onApply;
+  final RequestFilterType filterType;
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
+
+  const _RequestCard({
+    required this.request,
+    required this.filterType,
+    required this.onAccept,
+    required this.onDecline,
+  });
+
+  bool get _isPending => request.status.toUpperCase() == 'PENDING';
+  bool get _isDimmed => request.isSold || ['COMPLETED', 'IN_PROGRESS'].contains(request.status.toUpperCase());
 
   @override
   Widget build(BuildContext context) {
-    final isDimmed = request.isSold || request.isApplied;
-
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: isDimmed ? const Color(0xFFF5F5F5) : Colors.white,
+        color: _isDimmed ? const Color(0xFFF5F5F5) : Colors.white,
         borderRadius: BorderRadius.circular(16.r),
-        border: request.markAsPriority && !isDimmed
-            ? Border.all(
-            color: const Color(0xFFEF5350).withOpacity(0.4), width: 1.5)
+        border: request.markAsPriority && !_isDimmed
+            ? Border.all(color: const Color(0xFFEF5350).withOpacity(0.4), width: 1.5)
             : null,
         boxShadow: [
           BoxShadow(
@@ -270,430 +300,35 @@ class _AllRequestCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Client Row ─────────────────────────────────────────
-          Row(
-            children: [
-              // Avatar
-              Container(
-                width: 44.w,
-                height: 44.w,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8C106),
-                  borderRadius: BorderRadius.circular(22.r),
-                ),
-                child: Center(
-                  child: Text(
-                    request.customerName.isNotEmpty
-                        ? request.customerName[0].toUpperCase()
-                        : 'C',
-                    style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white),
-                  ),
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      request.customerName,
-                      style: TextStyle(
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w700,
-                        color: isDimmed
-                            ? const Color(0xFF9E9E9E)
-                            : const Color(0xFF212121),
-                      ),
-                    ),
-                    SizedBox(height: 3.h),
-                    Row(
-                      children: [
-                        Icon(Icons.access_time,
-                            size: 12.sp,
-                            color: const Color(0xFF9E9E9E)),
-                        SizedBox(width: 4.w),
-                        Text(request.formattedDate,
-                            style: TextStyle(
-                                fontSize: 12.sp,
-                                color: const Color(0xFF9E9E9E))),
-                        if (request.noCallJustChat) ...[
-                          SizedBox(width: 8.w),
-                          GestureDetector(
-                            onTap: () {
-                              // Create the controller and navigate
-                              Get.to(
-                                    () => ProfessionalChatScreen(
-                                  controller: ProfessionalChatController(
-                                    requestId  : request.id,
-                                    clientName : request.customerName,
-                                    jobLabel   : 'Job #${request.id}',
-                                    clientPhoto: request.customerPhoto ?? '',
-                                    myFullName : UserInfo.getFullNameSync() ?? '',
-                                  ),
-                                ),
-                              );
-                            },
-
-                            child: Row(
-                              children: [
-                                Icon(Icons.chat_bubble_outline,
-                                    size: 16.sp, color: const Color(0xFF1565C0)),
-                                SizedBox(width: 3.w),
-                                Text('Chat only',
-                                    style: TextStyle(
-                                        fontSize: 16.sp,
-                                        color: const Color(0xFF1565C0))),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (request.markAsPriority)
-                    Container(
-                      margin: EdgeInsets.only(bottom: 6.h),
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 8.w, vertical: 3.h),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEBEE),
-                        borderRadius: BorderRadius.circular(20.r),
-                      ),
-                      child: Text('Priority',
-                          style: TextStyle(
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFFEF5350))),
-                    ),
-                  Image.asset(
-                    request.iconAsset,
-                    width: 28.w,
-                    height: 28.w,
-                    color: isDimmed ? const Color(0xFFBDBDBD) : null,
-                    colorBlendMode:
-                    isDimmed ? BlendMode.saturation : null,
-                  ),
-                ],
-              ),
-            ],
-          ),
-
+          _buildClientRow(),
+          SizedBox(height: 14.h),
+          _buildIssueBox(),
           SizedBox(height: 12.h),
-
-          // ── Issue Box ──────────────────────────────────────────
-          Container(
-            width: double.infinity,
-            padding:
-            EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-            decoration: BoxDecoration(
-              color: isDimmed
-                  ? const Color(0xFFEEEEEE)
-                  : const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  request.displayName,
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w700,
-                    color: isDimmed
-                        ? const Color(0xFF9E9E9E)
-                        : const Color(0xFF212121),
-                  ),
-                ),
-                if (request.description.isNotEmpty) ...[
-                  SizedBox(height: 5.h),
-                  Text(
-                    request.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      color: isDimmed
-                          ? const Color(0xFFBDBDBD)
-                          : const Color(0xFF757575),
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-                SizedBox(height: 6.h),
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: 'Est. Cost  ',
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF9E9E9E),
-                        ),
-                      ),
-                      TextSpan(
-                        text: request.formattedAiCost,
-                        style: TextStyle(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w700,
-                          color: isDimmed
-                              ? const Color(0xFFBDBDBD)
-                              : const Color(0xFFF8C106),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: 12.h),
-
-          // ── Address ────────────────────────────────────────────
-          Row(
-            children: [
-              Icon(Icons.location_on_outlined,
-                  size: 14.sp, color: const Color(0xFF9E9E9E)),
-              SizedBox(width: 4.w),
-              Expanded(
-                child: Text(
-                  request.address,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: 13.sp,
-                      color: const Color(0xFF9E9E9E)),
-                ),
-              ),
-            ],
-          ),
-
+          _buildAddressRow(),
           SizedBox(height: 12.h),
           const Divider(height: 1, color: Color(0xFFF0F0F0)),
           SizedBox(height: 12.h),
-
-          // ── Bottom Row ─────────────────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Zip + applicants
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Zip Code',
-                      style: TextStyle(
-                          fontSize: 11.sp,
-                          color: const Color(0xFF9E9E9E))),
-                  SizedBox(height: 3.h),
-                  Text(
-                    request.zipCode,
-                    style: TextStyle(
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w800,
-                      color: isDimmed
-                          ? const Color(0xFF9E9E9E)
-                          : const Color(0xFFF8C106),
-                    ),
-                  ),
-                  if (request.applicationCount > 0) ...[
-                    SizedBox(height: 3.h),
-                    Text(
-                      '${request.applicationCount} applied',
-                      style: TextStyle(
-                          fontSize: 11.sp,
-                          color: const Color(0xFF9E9E9E)),
-                    ),
-                  ],
-                ],
-              ),
-
-              // Action button
-              if (request.isSold)
-                _badge(label: 'Sold', color: const Color(0xFF757575))
-              else if (request.isApplied)
-                _badge(label: 'Applied ✓', color: const Color(0xFF43A047))
-              else
-                GestureDetector(
-                  onTap: onApply,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: 18.w, vertical: 10.h),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8C106),
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Text(
-                      'Apply',
-                      style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          _buildBottomRow(),
         ],
       ),
     );
   }
 
-  Widget _badge({required String label, required Color color}) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8.r),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-            fontSize: 13.sp,
-            fontWeight: FontWeight.w600,
-            color: color),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// My Leads Job Request Card (unchanged from before)
-// ─────────────────────────────────────────────────────────────────────────────
-class _JobRequestCard extends StatelessWidget {
-  final Map<String, dynamic> request;
-  final JobStatus status;
-  final VoidCallback onAccept;
-  final VoidCallback onDecline;
-
-  const _JobRequestCard({
-    required this.request,
-    required this.status,
-    required this.onAccept,
-    required this.onDecline,
-  });
-
-  bool get _isDimmed =>
-      status == JobStatus.completed || status == JobStatus.inProcess;
-
-  String _s(dynamic value, {String fallback = ''}) {
-    if (value == null) return fallback;
-    if (value is String) return value.isEmpty ? fallback : value;
-    if (value is Map || value is List) return fallback;
-    return value.toString();
-  }
-
-  String get _clientName    => _s(request['customer_name'], fallback: 'Customer');
-  String get _timeAgo       => _s(request['formatted_date']);
-  String get _address       => _s(request['address']);
-  String get _zipCode       => _s(request['zip_code'], fallback: '—');
-  String get _customerPhoto => _s(request['customer_photo']);
-  bool   get _isSold        => request['is_sold'] == true;
-  bool   get _isPriority    => request['mark_as_priority'] == true;
-  bool   get _noChatOnly    => request['no_call_just_chat'] == true;
-
-  String get _aiCost => JobRequestsController.formatAiCost(request['ai_cost']);
-
-  String get _issueTitle {
-    final svcName = _s(request['service_name']);
-    if (svcName.isNotEmpty) return svcName;
-    final details = request['service_details'];
-    if (details is Map) return _s(details['name_en'], fallback: 'Service Request');
-    return 'Service Request';
-  }
-
-  String get _description {
-    final d = _s(request['description']);
-    return d.isNotEmpty ? d : '—';
-  }
-
-  String get _assetPath =>
-      JobRequestsController.assetFromIcon(_s(request['service_icon']));
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Container(
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            color: _isDimmed ? const Color(0xFFF5F5F5) : Colors.white,
-            borderRadius: BorderRadius.circular(16.r),
-            border: _isPriority && !_isDimmed && !_isSold
-                ? Border.all(
-                color: const Color(0xFFEF5350).withOpacity(0.4),
-                width: 1.5)
-                : null,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildClientRow(),
-              SizedBox(height: 14.h),
-              _buildIssueBox(),
-              SizedBox(height: 12.h),
-              _buildAddressRow(),
-              SizedBox(height: 12.h),
-              const Divider(height: 1, color: Color(0xFFF0F0F0)),
-              SizedBox(height: 12.h),
-              _buildBottomRow(),
-            ],
-          ),
-        ),
-        if (_isSold)
-          Positioned.fill(
-            child: Center(
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                    horizontal: 16.w, vertical: 10.h),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF474747),
-                  borderRadius: BorderRadius.circular(30.r),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.info_outline,
-                        color: Colors.white, size: 16.sp),
-                    SizedBox(width: 8.w),
-                    Text('Lead Already Sold',
-                        style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
+  // ── Client Row (Avatar + Name + Chat Button) ──────────────────────
   Widget _buildClientRow() {
     return Row(
       children: [
+        // Avatar
         ClipRRect(
           borderRadius: BorderRadius.circular(22.r),
-          child: _customerPhoto.isNotEmpty
-              ? Image.network(_customerPhoto,
-              width: 44.w, height: 44.w, fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _avatarFallback())
+          child: request.customerPhoto?.isNotEmpty == true
+              ? Image.network(
+            request.customerPhoto!,
+            width: 44.w,
+            height: 44.w,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _avatarFallback(),
+          )
               : _avatarFallback(),
         ),
         SizedBox(width: 12.w),
@@ -701,40 +336,36 @@ class _JobRequestCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(_clientName,
-                  style: TextStyle(
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w700,
-                      color: _isDimmed
-                          ? const Color(0xFF9E9E9E)
-                          : const Color(0xFF212121))),
+              Text(
+                request.customerName,
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.w700,
+                  color: _isDimmed ? const Color(0xFF9E9E9E) : const Color(0xFF212121),
+                ),
+              ),
               SizedBox(height: 3.h),
               Row(
                 children: [
-                  Icon(Icons.access_time,
-                      size: 12.sp, color: const Color(0xFF9E9E9E)),
+                  Icon(Icons.access_time, size: 12.sp, color: const Color(0xFF9E9E9E)),
                   SizedBox(width: 4.w),
-                  Text(_timeAgo,
-                      style: TextStyle(
-                          fontSize: 12.sp,
-                          color: const Color(0xFF9E9E9E))),
-                  if (_noChatOnly) ...[
+                  Text(
+                    request.formattedDate,
+                    style: TextStyle(fontSize: 12.sp, color: const Color(0xFF9E9E9E)),
+                  ),
+                  // ── Chat Button (Phone Hidden Logic) ───────────────
+                  if (request.noCallJustChat) ...[
                     SizedBox(width: 8.w),
                     GestureDetector(
                       onTap: () {
-                        final id = request['id'];
-                        if (id == null) {
-                          Get.snackbar('Error', 'Request ID not available');
-                          return;
-                        }
-
+                        // Create the controller and navigate
                         Get.to(
                               () => ProfessionalChatScreen(
                             controller: ProfessionalChatController(
-                              requestId  : id as int,
-                              clientName : _clientName,
-                              jobLabel   : 'Job #$id',
-                              clientPhoto: _customerPhoto,
+                              requestId  : request.id,
+                              clientName : request.customerName,
+                              jobLabel   : 'Job #${request.id}',
+                              clientPhoto: request.customerPhoto ?? '',
                               myFullName : UserInfo.getFullNameSync() ?? '',
                             ),
                           ),
@@ -758,30 +389,34 @@ class _JobRequestCard extends StatelessWidget {
             ],
           ),
         ),
+        // Priority Badge + Icon
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            if (_isPriority)
+            if (request.markAsPriority)
               Container(
                 margin: EdgeInsets.only(bottom: 6.h),
-                padding:
-                EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFEBEE),
                   borderRadius: BorderRadius.circular(20.r),
                 ),
-                child: Text('Priority',
-                    style: TextStyle(
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFFEF5350))),
+                child: Text(
+                  'Priority',
+                  style: TextStyle(
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFFEF5350),
+                  ),
+                ),
               ),
-            Image.asset(_assetPath,
-                width: 28.w,
-                height: 28.w,
-                color: _isDimmed ? const Color(0xFFBDBDBD) : null,
-                colorBlendMode:
-                _isDimmed ? BlendMode.saturation : null),
+            Image.asset(
+              request.iconAsset,
+              width: 28.w,
+              height: 28.w,
+              color: _isDimmed ? const Color(0xFFBDBDBD) : null,
+              colorBlendMode: _isDimmed ? BlendMode.saturation : null,
+            ),
           ],
         ),
       ],
@@ -798,66 +433,66 @@ class _JobRequestCard extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          _clientName.isNotEmpty ? _clientName[0].toUpperCase() : 'C',
-          style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w700,
-              color: Colors.white),
+          request.customerName.isNotEmpty ? request.customerName[0].toUpperCase() : 'C',
+          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700, color: Colors.white),
         ),
       ),
     );
   }
 
+  // ── Issue Box (Service + Description + Cost) ──────────────────────
   Widget _buildIssueBox() {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
       decoration: BoxDecoration(
-        color: _isDimmed
-            ? const Color(0xFFEEEEEE)
-            : const Color(0xFFF5F5F5),
+        color: _isDimmed ? const Color(0xFFEEEEEE) : const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(10.r),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(_issueTitle,
-              style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w700,
-                  color: _isDimmed
-                      ? const Color(0xFF9E9E9E)
-                      : const Color(0xFF212121))),
-          if (_description != '—') ...[
+          Text(
+            request.displayName,
+            style: TextStyle(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w700,
+              color: _isDimmed ? const Color(0xFF9E9E9E) : const Color(0xFF212121),
+            ),
+          ),
+          if (request.description.isNotEmpty) ...[
             SizedBox(height: 5.h),
-            Text(_description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontSize: 12.sp,
-                    color: _isDimmed
-                        ? const Color(0xFFBDBDBD)
-                        : const Color(0xFF757575),
-                    height: 1.4)),
+            Text(
+              request.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: _isDimmed ? const Color(0xFFBDBDBD) : const Color(0xFF757575),
+                height: 1.4,
+              ),
+            ),
             SizedBox(height: 6.h),
           ],
           RichText(
             text: TextSpan(
               children: [
                 TextSpan(
-                    text: 'Est. Cost  ',
-                    style: TextStyle(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF9E9E9E))),
+                  text: 'Est. Cost  ',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF9E9E9E),
+                  ),
+                ),
                 TextSpan(
-                    text: _aiCost,
-                    style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w700,
-                        color: _isDimmed
-                            ? const Color(0xFFBDBDBD)
-                            : const Color(0xFFF8C106))),
+                  text: request.formattedAiCost,
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: _isDimmed ? const Color(0xFFBDBDBD) : const Color(0xFFF8C106),
+                  ),
+                ),
               ],
             ),
           ),
@@ -866,112 +501,151 @@ class _JobRequestCard extends StatelessWidget {
     );
   }
 
+  // ── Address Row ───────────────────────────────────────────────────
   Widget _buildAddressRow() {
     return Row(
       children: [
-        Icon(Icons.location_on_outlined,
-            size: 14.sp, color: const Color(0xFF9E9E9E)),
+        Icon(Icons.location_on_outlined, size: 14.sp, color: const Color(0xFF9E9E9E)),
         SizedBox(width: 4.w),
         Expanded(
-          child: Text(_address,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: 13.sp, color: const Color(0xFF9E9E9E))),
+          child: Text(
+            request.address,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 13.sp, color: const Color(0xFF9E9E9E)),
+          ),
         ),
       ],
     );
   }
 
+  // ── Bottom Row (Zip + Action Buttons) ─────────────────────────────
   Widget _buildBottomRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        // Zip Code + Applicants
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Zip Code',
-                style: TextStyle(
-                    fontSize: 11.sp, color: const Color(0xFF9E9E9E))),
+            Text('Zip Code', style: TextStyle(fontSize: 11.sp, color: const Color(0xFF9E9E9E))),
             SizedBox(height: 3.h),
-            Text(_zipCode,
-                style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w800,
-                    color: _isDimmed
-                        ? const Color(0xFF9E9E9E)
-                        : const Color(0xFFF8C106))),
+            Text(
+              request.zipCode,
+              style: TextStyle(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w800,
+                color: _isDimmed ? const Color(0xFF9E9E9E) : const Color(0xFFF8C106),
+              ),
+            ),
+            if (request.applicationCount > 0) ...[
+              SizedBox(height: 3.h),
+              Text(
+                '${request.applicationCount} applied',
+                style: TextStyle(fontSize: 11.sp, color: const Color(0xFF9E9E9E)),
+              ),
+            ],
           ],
         ),
-        if (status == JobStatus.pending && !_isSold) _buildPendingButtons(),
-        if (status == JobStatus.completed)
-          _buildStatusBadge(
-              label: 'Completed', color: const Color(0xFF43A047)),
-        if (status == JobStatus.inProcess)
-          _buildStatusBadge(
-              label: 'In Process', color: const Color(0xFF1565C0)),
+        // Action Buttons based on status & filter
+        _buildActionButtons(),
       ],
     );
   }
 
-  Widget _buildPendingButtons() {
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: onDecline,
-          child: Container(
-            padding:
-            EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8.r),
-              border: Border.all(
-                  color: const Color(0xFFE53935), width: 1.5),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.close,
-                    color: const Color(0xFFE53935), size: 14.sp),
-                SizedBox(width: 6.w),
-                Text('Decline',
-                    style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFFE53935))),
-              ],
-            ),
-          ),
-        ),
-        SizedBox(width: 10.w),
-        GestureDetector(
-          onTap: onAccept,
-          child: Container(
-            padding:
-            EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
-            decoration: BoxDecoration(
-              color: const Color(0xFF43A047),
-              borderRadius: BorderRadius.circular(8.r),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.check, color: Colors.white, size: 14.sp),
-                SizedBox(width: 6.w),
-                Text('Accept',
-                    style: TextStyle(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white)),
-              ],
+  Widget _buildActionButtons() {
+    // Sold overlay handled in Stack parent if needed
+    if (request.isSold) {
+      return _badge(label: 'Sold', color: const Color(0xFF757575));
+    }
+
+    final status = request.status.toUpperCase();
+
+    // Completed / In Progress - Show status badge
+    if (['COMPLETED'].contains(status)) {
+      return _buildStatusBadge(label: 'Completed', color: const Color(0xFF43A047));
+    }
+    if (['IN_PROGRESS', 'ACCEPTED', 'ON_THE_WAY'].contains(status)) {
+      return _buildStatusBadge(label: request.statusDisplay, color: const Color(0xFF1565C0));
+    }
+
+    // Pending - Show Accept/Decline (only for New/Private/Emergency filters)
+    if (_isPending && filterType != RequestFilterType.active) {
+      return Row(
+        children: [
+          GestureDetector(
+            onTap: onDecline,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(color: const Color(0xFFE53935), width: 1.5),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.close, color: const Color(0xFFE53935), size: 14.sp),
+                  SizedBox(width: 4.w),
+                  Text('Decline', style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600, color: const Color(0xFFE53935))),
+                ],
+              ),
             ),
           ),
+          SizedBox(width: 8.w),
+          GestureDetector(
+            onTap: onAccept,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+              decoration: BoxDecoration(
+                color: const Color(0xFF43A047),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.check, color: Colors.white, size: 14.sp),
+                  SizedBox(width: 4.w),
+                  Text('Accept', style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600, color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Active filter - Show "View Details" or status
+    return GestureDetector(
+      onTap: () => onAccept(), // Navigate to ActiveJobScreen
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8C106),
+          borderRadius: BorderRadius.circular(8.r),
         ),
-      ],
+        child: Text(
+          'View Details',
+          style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w700, color: Colors.white),
+        ),
+      ),
     );
   }
 
-  Widget _buildStatusBadge(
-      {required String label, required Color color}) {
+  Widget _badge({required String label, required Color color}) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600, color: color),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge({required String label, required Color color}) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8.r),
@@ -979,42 +653,29 @@ class _JobRequestCard extends StatelessWidget {
       child: Row(
         children: [
           Icon(Icons.check, color: color, size: 14.sp),
-          SizedBox(width: 6.w),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w600,
-                  color: color)),
+          SizedBox(width: 4.w),
+          Text(label, style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600, color: color)),
         ],
       ),
     );
   }
-}
 
-// ── Shared helpers ─────────────────────────────────────────────────
-Widget _sectionLabel(String title) {
-  return Text(
-    title,
-    style: TextStyle(
-      fontSize: 14.sp,
-      fontWeight: FontWeight.w700,
-      color: const Color(0xFF9E9E9E),
-    ),
-  );
-}
-
-Widget _buildEmpty(String message) {
-  return Center(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.inbox_outlined,
-            size: 60.sp, color: const Color(0xFFBDBDBD)),
-        SizedBox(height: 12.h),
-        Text(message,
-            style: TextStyle(
-                fontSize: 14.sp, color: const Color(0xFF9E9E9E))),
-      ],
-    ),
-  );
+  // ── Open Chat (Phone Hidden Logic) ────────────────────────────────
+  void _openChat(BuildContext context) {
+    if (request.id <= 0) {
+      Get.snackbar('Error', 'Request ID not available', snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+    Get.to(
+          () => ProfessionalChatScreen(
+        controller: ProfessionalChatController(
+          requestId: request.id,
+          clientName: request.customerName,
+          jobLabel: 'Job #${request.id}',
+          clientPhoto: request.customerPhoto ?? '',
+          myFullName: UserInfo.getFullNameSync() ?? '',
+        ),
+      ),
+    );
+  }
 }

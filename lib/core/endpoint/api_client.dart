@@ -44,7 +44,7 @@ class ApiClient {
   Future<dynamic> get(
       String endpoint, {
         Map<String, String>? headers,
-        bool requiresAuth = true,
+        bool requiresAuth = true, Map<String, String?>? queryParameters,
       }) async {
     final url = Uri.parse(_buildUrl(endpoint));
     final baseHeaders = requiresAuth ? _authHeaders() : {..._defaultHeaders};

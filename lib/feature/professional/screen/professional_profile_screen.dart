@@ -12,7 +12,7 @@ class ProfessionalProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c  = Get.find<ProfessionalHomeController>();
+    final c  = Get.put(ProfessionalHomeController());
     final pc = Get.put(ProfessionalProfileController());
 
     return Scaffold(

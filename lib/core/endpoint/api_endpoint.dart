@@ -47,10 +47,21 @@ class ApiEndpoint {
   static const String proHomepage        = "/services/requests/pro/homepage/";
   static const String servicesList = '/services/list/';
 
+  // lib/core/endpoint/api_endpoint.dart
+
+
+
+  // ── Professional Request Endpoints ────────────────────────────────
+  static const String proActiveRequests = '/services/requests/pro/active/';
+  static const String proPrivateRequests = '/services/requests/pro/private/';
+  static const String proEmergencyRequests = '/services/requests/pro/emergency/';
+  static const String proNewRequests = '/services/requests/pro/new/';
+  static String proRequestRespond(int id) => '/services/requests/$id/respond/';
+
+
   static const String proRequests        = "/services/requests/pro/requests/";
   static const String providerOnboarding = "/pro/onboarding/";
   static const String activateSubscription = "/pro/subscription/activate/";
-  static String proRequestRespond(int id)  => '/services/requests/$id/respond/';
   static String proAdvanceStatus(int id)   => '/services/requests/$id/advance-status/';
   static String proSubmitBill(int id)      => '/services/requests/$id/submit-bill/';
   static String chatMessages(int id)  => '/requests/$id/messages/';
