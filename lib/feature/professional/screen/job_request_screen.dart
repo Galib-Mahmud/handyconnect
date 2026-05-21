@@ -5,6 +5,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:handyConnect/feature/professional/controller/job_request_controller.dart';
 
+import '../../../core/local_storage/user_info.dart';
+import '../../../route/route_name.dart';
+import '../../chat/controller/chat_controller.dart';
+import '../../chat/screen/chat_screen.dart';
+
 class JobRequestsScreen extends StatelessWidget {
   const JobRequestsScreen({super.key});
 
@@ -316,14 +321,34 @@ class _AllRequestCard extends StatelessWidget {
                                 color: const Color(0xFF9E9E9E))),
                         if (request.noCallJustChat) ...[
                           SizedBox(width: 8.w),
-                          Icon(Icons.chat_bubble_outline,
-                              size: 12.sp,
-                              color: const Color(0xFF1565C0)),
-                          SizedBox(width: 3.w),
-                          Text('Chat only',
-                              style: TextStyle(
-                                  fontSize: 11.sp,
-                                  color: const Color(0xFF1565C0))),
+                          GestureDetector(
+                            onTap: () {
+                              // Create the controller and navigate
+                              Get.to(
+                                    () => ProfessionalChatScreen(
+                                  controller: ProfessionalChatController(
+                                    requestId  : request.id,
+                                    clientName : request.customerName,
+                                    jobLabel   : 'Job #${request.id}',
+                                    clientPhoto: request.customerPhoto ?? '',
+                                    myFullName : UserInfo.getFullNameSync() ?? '',
+                                  ),
+                                ),
+                              );
+                            },
+
+                            child: Row(
+                              children: [
+                                Icon(Icons.chat_bubble_outline,
+                                    size: 16.sp, color: const Color(0xFF1565C0)),
+                                SizedBox(width: 3.w),
+                                Text('Chat only',
+                                    style: TextStyle(
+                                        fontSize: 16.sp,
+                                        color: const Color(0xFF1565C0))),
+                              ],
+                            ),
+                          ),
                         ],
                       ],
                     ),
@@ -695,13 +720,38 @@ class _JobRequestCard extends StatelessWidget {
                           color: const Color(0xFF9E9E9E))),
                   if (_noChatOnly) ...[
                     SizedBox(width: 8.w),
-                    Icon(Icons.chat_bubble_outline,
-                        size: 12.sp, color: const Color(0xFF1565C0)),
-                    SizedBox(width: 3.w),
-                    Text('Chat only',
-                        style: TextStyle(
-                            fontSize: 11.sp,
-                            color: const Color(0xFF1565C0))),
+                    GestureDetector(
+                      onTap: () {
+                        final id = request['id'];
+                        if (id == null) {
+                          Get.snackbar('Error', 'Request ID not available');
+                          return;
+                        }
+
+                        Get.to(
+                              () => ProfessionalChatScreen(
+                            controller: ProfessionalChatController(
+                              requestId  : id as int,
+                              clientName : _clientName,
+                              jobLabel   : 'Job #$id',
+                              clientPhoto: _customerPhoto,
+                              myFullName : UserInfo.getFullNameSync() ?? '',
+                            ),
+                          ),
+                        );
+                      },
+                      child: Row(
+                        children: [
+                          Icon(Icons.chat_bubble_outline,
+                              size: 12.sp, color: const Color(0xFF1565C0)),
+                          SizedBox(width: 3.w),
+                          Text('Chat only',
+                              style: TextStyle(
+                                  fontSize: 11.sp,
+                                  color: const Color(0xFF1565C0))),
+                        ],
+                      ),
+                    ),
                   ],
                 ],
               ),

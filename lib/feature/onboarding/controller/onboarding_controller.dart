@@ -3,15 +3,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
+import 'package:dio/dio.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:handyConnect/core/endpoint/api_client.dart';
 import 'package:handyConnect/core/endpoint/api_endpoint.dart';
 import 'package:handyConnect/core/local_storage/user_info.dart';
 import 'package:handyConnect/route/route_name.dart';
-import 'package:dio/dio.dart';
-import 'package:handyConnect/core/local_storage/user_info.dart' show UserInfo;
 import 'package:image_picker/image_picker.dart';
-
-import '../screen/location_helper.dart';
 
 class OnboardingController extends GetxController {
   static OnboardingController get to =>
@@ -23,47 +21,31 @@ class OnboardingController extends GetxController {
   // ─────────────────────────────────────────────────────────────────
   // SCREEN 3 — Services fetched from API
   // ─────────────────────────────────────────────────────────────────
-
-  // Full list from GET /services/list/
-  // Each item: { 'id': 4, 'name_en': 'Plumbing', 'icon': '⚡', 'color': '#F54927', ... }
   final RxList<Map<String, dynamic>> availableServices =
       <Map<String, dynamic>>[].obs;
+  final RxSet<int>   selectedServiceIds = <int>{}.obs;
+  final RxBool       isLoadingServices  = false.obs;
+  final RxBool       isHourly           = true.obs;
+  final RxDouble     serviceRadius      = 15.0.obs;
+  final businessAddressController       = TextEditingController();
 
-  // Selected service IDs (real IDs from API, e.g. {4, 5})
-  final RxSet<int> selectedServiceIds = <int>{}.obs;
-
-  final RxBool   isLoadingServices = false.obs;
-  final RxBool   isHourly          = true.obs;
-  final RxDouble serviceRadius     = 15.0.obs;
-  final businessAddressController  = TextEditingController();
-
-  // ── Fetch services from API ───────────────────────────────────────
   Future<void> fetchServices() async {
     try {
       isLoadingServices.value = true;
-      print('📋 [SERVICES] Fetching from ${ApiEndpoint.servicesList}...');
-
+      print('📋 [SERVICES] Fetching...');
       final response = await _apiClient.get(ApiEndpoint.servicesList);
-
-      // Response is a List
       final List<dynamic> list = response is List ? response : [];
-      availableServices.value = list
-          .map((e) => Map<String, dynamic>.from(e as Map))
-          .toList();
-
+      availableServices.value =
+          list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       print('✅ [SERVICES] Loaded ${availableServices.length} services');
-      for (final s in availableServices) {
-        print('   → id=${s['id']}  name=${s['name_en']}  icon=${s['icon']}');
-      }
     } catch (e) {
-      print('❌ [SERVICES] Failed to load: $e');
+      print('❌ [SERVICES] Failed: $e');
       _showError('Could not load services. Please try again.');
     } finally {
       isLoadingServices.value = false;
     }
   }
 
-  // Toggle by real service ID
   void toggleService(int id) {
     if (selectedServiceIds.contains(id)) {
       selectedServiceIds.remove(id);
@@ -81,17 +63,17 @@ class OnboardingController extends GetxController {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // SCREEN 2 — Document Upload state
+  // SCREEN 2 — Document Upload
   // ─────────────────────────────────────────────────────────────────
-  final Rx<File?> governmentIdFile  = Rx<File?>(null);
-  final Rx<File?> certificateFile   = Rx<File?>(null);
-  final Rx<File?> profilePhotoFile  = Rx<File?>(null);
+  final Rx<File?> governmentIdFile = Rx<File?>(null);
+  final Rx<File?> certificateFile  = Rx<File?>(null);
+  final Rx<File?> profilePhotoFile = Rx<File?>(null);
 
   int get uploadedCount {
     int count = 0;
-    if (governmentIdFile.value  != null) count++;
-    if (certificateFile.value   != null) count++;
-    if (profilePhotoFile.value  != null) count++;
+    if (governmentIdFile.value != null) count++;
+    if (certificateFile.value  != null) count++;
+    if (profilePhotoFile.value != null) count++;
     return count;
   }
 
@@ -117,21 +99,62 @@ class OnboardingController extends GetxController {
 
   Future<void> pickProfilePhoto() async {
     final xfile = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
-    );
+        source: ImageSource.gallery, imageQuality: 85);
     if (xfile != null) profilePhotoFile.value = File(xfile.path);
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // SUBMIT — Single PATCH /pro/onboarding/  (multipart/form-data)
-  //
-  // Multiple services → send each id as a separate 'services' field
-  // (multipart allows duplicate keys, Django reads them as a list)
-  //
-  // Fields : business_address, service_radius, services (repeated),
-  //          onboarding_status, lat, lng
-  // Files  : government_id, professional_certificate, profile_photo
+  // GPS — request permission + get location
+  // ─────────────────────────────────────────────────────────────────
+  Future<Position?> _getLocation() async {
+    // 1. Check service enabled
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _showError('Please enable location services and try again.');
+      await Geolocator.openLocationSettings(); // opens device location settings
+      return null;
+    }
+
+    // 2. Check / request permission
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission(); // shows system dialog
+      if (permission == LocationPermission.denied) {
+        _showError('Location permission is required to continue.');
+        return null;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      _showError('Please enable location in app settings.');
+      await Geolocator.openAppSettings();
+      return null;
+    }
+
+    // 3. Get position — retry once on timeout
+    for (int attempt = 1; attempt <= 2; attempt++) {
+      try {
+        print('📍 [GPS] Attempt $attempt...');
+        final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 30),
+        );
+        print('✅ [GPS] Got location: ${pos.latitude}, ${pos.longitude}');
+        return pos;
+      } catch (e) {
+        print('⚠️ [GPS] Attempt $attempt failed: $e');
+        if (attempt == 2) {
+          _showError('Could not get location. Check GPS and try again.');
+          return null;
+        }
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    }
+    return null;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // SUBMIT — PATCH /pro/onboarding/  (multipart via dio)
   // ─────────────────────────────────────────────────────────────────
   final RxBool isLoading = false.obs;
 
@@ -154,33 +177,42 @@ class OnboardingController extends GetxController {
 
     isLoading.value = true;
     try {
-      // ── Get device location (mandatory) ───────────────────────
-      final pos = await LocationHelper.getLocation();
+      // ── Location ──────────────────────────────────────────────
+      final pos = await _getLocation();
       if (pos == null) return;
 
       print('📤 [ONBOARDING] Submitting...');
-      print('   services  : ${selectedServiceIds.toList()}');
-      print('   lat       : ${pos.latitude}');
-      print('   lng       : ${pos.longitude}');
-      print('   radius    : ${serviceRadius.value.toInt()} km');
+      print('   services : ${selectedServiceIds.toList()}');
+      print('   lat      : ${pos.latitude}');
+      print('   lng      : ${pos.longitude}');
+      print('   radius   : ${serviceRadius.value.toInt()} km');
 
-      // ── Build FormData (dio supports repeated keys) ──────────
-      // services sent as repeated form fields → Django reads as list
-      final token = await UserInfo.getAccessToken();
+      // ── Build URL (plain string concatenation — no interpolation bug) ──
+      final String url =
+          ApiEndpoint.baseUrl + ApiEndpoint.providerOnboarding;
+      print('🌐 [ONBOARDING] URL: $url');
+
+      // ── Auth token ────────────────────────────────────────────
+      final String? token = await UserInfo.getAccessToken();
+
+      // ── Dio instance ──────────────────────────────────────────
       final dio = Dio();
-      dio.options.headers['Authorization'] = 'Bearer $token';
+      dio.options.headers = {
+        'Authorization': 'Bearer $token',
+      };
 
+      // ── FormData — dio sends List as repeated keys ────────────
+      // services: [4, 5]  →  services=4&services=5 (Django reads as list)
       final formData = FormData.fromMap({
         'business_address' : businessAddressController.text.trim(),
         'service_radius'   : serviceRadius.value.toInt(),
         'onboarding_status': 'UNDER_REVIEW',
         'lat'              : pos.latitude.toString(),
         'lng'              : pos.longitude.toString(),
-        // dio sends List as repeated keys: services=4&services=5
-        'services': selectedServiceIds.toList(),
+        'services'         : selectedServiceIds.toList(),
       });
 
-      // Attach files
+      // ── Attach files ──────────────────────────────────────────
       formData.files.addAll([
         MapEntry('government_id',
             await MultipartFile.fromFile(governmentIdFile.value!.path)),
@@ -190,13 +222,9 @@ class OnboardingController extends GetxController {
             await MultipartFile.fromFile(profilePhotoFile.value!.path)),
       ]);
 
-      print('📎 [ONBOARDING] services ids: ${selectedServiceIds.toList()}');
-
-      final dioResponse = await dio.patch(
-        '\${ApiEndpoint.baseUrl}\${ApiEndpoint.providerOnboarding}',
-        data: formData,
-      );
-      final response = dioResponse.data;
+      // ── PATCH request ─────────────────────────────────────────
+      final dioResponse = await dio.patch(url, data: formData);
+      final response    = dioResponse.data;
 
       print('✅ [ONBOARDING] Response: $response');
 
@@ -209,9 +237,10 @@ class OnboardingController extends GetxController {
 
       _onboardingSubmitSuccess.value = true;
 
-    } on HttpException catch (e) {
-      print('❌ [ONBOARDING] HttpException: ${e.message}');
-      _showError(e.message);
+    } on DioException catch (e) {
+      final msg = e.response?.data?.toString() ?? e.message ?? 'Request failed.';
+      print('❌ [ONBOARDING] DioException: $msg');
+      _showError(msg);
     } catch (e) {
       print('❌ [ONBOARDING] Error: $e');
       _showError('Something went wrong. Please try again.');

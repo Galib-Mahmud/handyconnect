@@ -30,11 +30,15 @@ class JobProgressStep {
 class ActiveJobController extends GetxController {
   final ApiClient  _apiClient = ApiClient(baseUrl: ApiEndpoint.baseUrl);
   final ImagePicker _picker   = ImagePicker();
-
   // Job ID comes from Get.arguments — set when acceptRequest() navigates
   int get jobId => (Get.arguments?['jobId'] as int?) ?? 0;
 
+  // ── My own full name — needed for chat "isSentByMe" logic ────────  ← ADD THIS
+  String get myName => UserInfo.getFullNameSync() ?? '';
+
   final RxBool isActionLoading = false.obs;
+
+
 
   // ── Job info ──────────────────────────────────────────────────────
   final RxString jobStatus     = 'Confirmed'.obs;

@@ -224,7 +224,7 @@ class JobRequestsController extends GetxController {
     print('   newLeads IDs: ${newLeads.map((r) => r['id']).toList()}');
 
     final requestData = newLeads.firstWhere(
-          (r) => r['id'] == requestId,
+          (r) => r['id'] != null &&  r['id']== requestId,
       orElse: () => {},
     );
 
@@ -286,7 +286,7 @@ class JobRequestsController extends GetxController {
     try {
       final res = await _apiClient.post(
         ApiEndpoint.proRequestRespond(requestId),
-        body: {'action': 'apply'},
+        body: {'action': 'accept'},
         requiresAuth: true,
       );
       print('✅ [APPLY] Response: $res');
