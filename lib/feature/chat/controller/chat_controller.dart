@@ -11,7 +11,6 @@ import 'package:handyConnect/core/local_storage/user_info.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as ws_status;
 
-
 // ── Model ──────────────────────────────────────────────────────────
 class ChatMessage {
   final String text;
@@ -28,12 +27,11 @@ class ChatMessage {
     this.sender,
   });
 
-  /// From REST history  GET /api/requests/{id}/messages/
+  /// From REST history  GET /api/services/requests/{id}/messages/
+  /// API fields: content, is_me, sender_name, timestamp
   factory ChatMessage.fromJson(Map<String, dynamic> json, String myName) {
-    final sender   = (json['sender_name'] ?? json['sender'] ?? '') as String;
-    final sentByMe = sender == myName;
-    final ts       = json['timestamp'] as String? ?? '';
-    String time    = '';
+    final ts = json['timestamp'] as String? ?? '';
+    String time = '';
     if (ts.isNotEmpty) {
       try {
         final dt = DateTime.parse(ts).toLocal();
@@ -43,11 +41,13 @@ class ChatMessage {
         time = ts;
       }
     }
+    final bool sentByMe = json['is_me'] == true;
     return ChatMessage(
-      text      : (json['message'] ?? json['text'] ?? '') as String,
+      text      : (json['content'] ?? json['message'] ?? json['text'] ?? '') as String,
       isSentByMe: sentByMe,
       time      : time,
-      sender    : sender,
+      sender    : (json['sender_name'] ?? '') as String,
+      status    : sentByMe ? 'Sent' : null,
     );
   }
 
@@ -59,7 +59,7 @@ class ChatMessage {
     final time     = '${now.hour.toString().padLeft(2, '0')}:'
         '${now.minute.toString().padLeft(2, '0')}';
     return ChatMessage(
-      text      : (json['message'] ?? '') as String,
+      text      : (json['message'] ?? json['content'] ?? '') as String,
       isSentByMe: sentByMe,
       time      : time,
       sender    : sender,
@@ -74,26 +74,25 @@ class ProfessionalChatController extends GetxController {
 
   // ── Set via constructor ──────────────────────────────────────────
   final int    requestId;
-  final String clientName;
+  final String clientNameArg;
   final String jobLabel;
   final String clientPhoto;
   final String myFullName;
 
   ProfessionalChatController({
     required this.requestId,
-    required this.clientName,
-    required this.jobLabel,
-    required this.clientPhoto,
+    String clientName = 'Chat',
+    this.jobLabel = 'Service Request',
+    this.clientPhoto = '',
     required this.myFullName,
-  });
-
-  // remove the late final fields and the args parsing block in onInit
-  // rename _myFullName usages → myFullName
+  }) : clientNameArg = clientName;
 
   // ── Reactive state ───────────────────────────────────────────────
   final RxList<ChatMessage> messages = <ChatMessage>[].obs;
-  final RxBool isLoading             = false.obs;
-  final RxBool isConnected           = false.obs;
+  final RxBool   isLoading   = false.obs;
+  final RxBool   isConnected = false.obs;
+  // Opposite party-r naam — history load hole automatically set hobe
+  final RxString clientName  = ''.obs;
 
   final TextEditingController textController   = TextEditingController();
   final ScrollController      scrollController = ScrollController();
@@ -109,10 +108,10 @@ class ProfessionalChatController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    clientName.value = clientNameArg;
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     print('💬 [CHAT] Controller init');
     print('   requestId : $requestId');
-    print('   clientName: $clientName');
     print('   myName    : $myFullName');
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
@@ -148,6 +147,7 @@ class ProfessionalChatController extends GetxController {
         raw.map((e) => ChatMessage.fromJson(
             Map<String, dynamic>.from(e as Map), myFullName)),
       );
+      _resolveClientName(raw);
       print('✅ [CHAT] History: ${messages.length} message(s)');
       _scrollToBottom();
     } catch (e) {
@@ -157,37 +157,61 @@ class ProfessionalChatController extends GetxController {
     }
   }
 
+  /// History theke opposite party-r naam ber kore set kore.
+  /// is_me == false jonner prothom sender_name = opposite party.
+  void _resolveClientName(List<dynamic> raw) {
+    for (final e in raw) {
+      final m = Map<String, dynamic>.from(e as Map);
+      if (m['is_me'] == false) {
+        final name = (m['sender_name'] ?? '').toString();
+        if (name.isNotEmpty) {
+          clientName.value = name;
+          break;
+        }
+      }
+    }
+  }
   void _connectWebSocket() {
     print('🔍 [WS] Connecting — requestId=$requestId  disposed=$_disposed');
     if (requestId == 0 || _disposed) return;
 
+    final token = UserInfo.getAccessTokenSync() ?? '';
+    if (token.isEmpty) {
+      print('⚠️ [WS] No token');
+      return;
+    }
+
+    _pingTimer?.cancel();
+    _wsSub?.cancel();
+    try { _channel?.sink.close(); } catch (_) {}
+
+    final wsUri = Uri.parse(
+        '${ApiEndpoint.chatWebSocket(requestId)}?token=$token');
+    print('🔌 [WS] → $wsUri');
+
     try {
-      final token = UserInfo.getAccessTokenSync() ?? '';
-      if (token.isEmpty) { print('⚠️ [WS] No token'); return; }
-
-      _pingTimer?.cancel();
-      _wsSub?.cancel();
-      try { _channel?.sink.close(); } catch (_) {}
-
-      final wsUri = Uri.parse(
-          '${ApiEndpoint.chatWebSocket(requestId)}?token=$token');
-      print('🔌 [WS] → $wsUri');
-
       _channel = WebSocketChannel.connect(wsUri);
 
+      // ✅ Handshake success = connected. Set isConnected HERE.
+      _channel!.ready.then((_) {
+        if (_disposed) return;
+        print('🤝 [WS] Handshake OK — connected!');
+        isConnected.value = true;
+        _retryCount = 0;
+        _flushPendingQueue();
+        _startPingTimer();
+      }).catchError((e) {
+        print('❌ [WS] Handshake failed: $e');
+        isConnected.value = false;
+        _pingTimer?.cancel();
+        _scheduleReconnect();
+      });
+
+      // Stream listener — ONLY for receiving messages
       _wsSub = _channel!.stream.listen(
-            (data) {
-          if (!isConnected.value) {
-            isConnected.value = true;
-            _retryCount       = 0;
-            print('✅ [WS] Connected — request $requestId');
-            _flushPendingQueue();
-            _startPingTimer();
-          }
-          _onWsMessage(data);
-        },
-        onError      : _onWsError,
-        onDone       : _onWsDone,
+            (data) => _onWsMessage(data),
+        onError: _onWsError,
+        onDone: _onWsDone,
         cancelOnError: false,
       );
     } catch (e) {
@@ -214,6 +238,12 @@ class ProfessionalChatController extends GetxController {
       final msg = ChatMessage.fromWs(data, myFullName);
       if (!msg.isSentByMe) {
         messages.add(msg);
+        // opposite party naam jana na thakle WS theke nao
+        if (clientName.value.isEmpty ||
+            clientName.value == 'Chat') {
+          final s = (data['sender'] ?? '').toString();
+          if (s.isNotEmpty) clientName.value = s;
+        }
         _scrollToBottom();
       }
     } catch (e) {
@@ -269,9 +299,10 @@ class ProfessionalChatController extends GetxController {
   }
 
   void _sendViaSocket(String text) {
+    final payload = jsonEncode({'message': text});
     try {
-      _channel!.sink.add(jsonEncode({'message': text}));
-      print('📤 [WS] Sent: "$text"');
+      _channel!.sink.add(payload);
+      print('📤 [WS] Sent: $payload');
     } catch (e) {
       print('❌ [WS] Send failed: $e');
       _pendingQueue.insert(0, text);

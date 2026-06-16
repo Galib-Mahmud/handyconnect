@@ -1,4 +1,4 @@
-// lib/features/home/controllers/request_controller.dart
+// lib/features/home/controller/new_request_controller.dart
 
 import 'dart:io';
 import 'package:get/get.dart';
@@ -24,9 +24,6 @@ class RequestController extends GetxController {
   // ── Location (mandatory) ──────────────────────────────────────────
   double? _lat;
   double? _lng;
-
-  // ── Draft Request ID ──────────────────────────────────────────────
-  int? _draftRequestId;
 
   // ─────────────────────────────────────────────────────────────────
   // Image Picker
@@ -57,11 +54,10 @@ class RequestController extends GetxController {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // GPS — MANDATORY. Returns false if location could not be obtained.
+  // GPS — MANDATORY
   // ─────────────────────────────────────────────────────────────────
   Future<bool> _fetchLocation() async {
     try {
-      // 1. Check if location service is on
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         Get.snackbar(
@@ -72,7 +68,6 @@ class RequestController extends GetxController {
         return false;
       }
 
-      // 2. Check / request permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -96,7 +91,6 @@ class RequestController extends GetxController {
         return false;
       }
 
-      // 3. Get position
       final Position pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
         timeLimit: const Duration(seconds: 10),
@@ -105,7 +99,6 @@ class RequestController extends GetxController {
       _lng = pos.longitude;
       print('📍 [GPS] Location: $_lat, $_lng');
       return true;
-
     } catch (e) {
       print('❌ [GPS] Error: $e');
       Get.snackbar(
@@ -118,24 +111,7 @@ class RequestController extends GetxController {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // STEP 1 — POST /services/requests/initialize/
-  // Body: { "service": serviceId }   ← real id from categories
-  // ─────────────────────────────────────────────────────────────────
-  Future<int> _initializeRequest(int serviceId) async {
-    print('🚀 [INIT] Initializing with service id: $serviceId');
-
-    final response = await _apiClient.post(
-      ApiEndpoint.initializeRequest,   // '/services/requests/initialize/'
-      body: {'service': serviceId},
-    );
-
-    final int requestId = response['id'] as int;
-    print('✅ [INIT] Draft request created. ID: $requestId');
-    return requestId;
-  }
-
-  // ─────────────────────────────────────────────────────────────────
-  // STEP 2 — POST /services/media/upload/  (multipart, optional)
+  // STEP 1 — POST /services/media/upload/  (multipart, optional)
   // ─────────────────────────────────────────────────────────────────
   Future<void> _uploadMediaFiles(int requestId) async {
     for (int i = 0; i < selectedImages.length; i++) {
@@ -156,8 +132,7 @@ class RequestController extends GetxController {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // STEP 3 — PATCH /services/requests/{id}/
-  // lat & lng are mandatory here — already guaranteed before this call
+  // STEP 2 — PATCH /services/requests/{id}/
   // ─────────────────────────────────────────────────────────────────
   Future<void> _finalizeRequest({
     required int    requestId,
@@ -175,7 +150,7 @@ class RequestController extends GetxController {
       'no_call_just_chat': !canCall.value,
       'mark_as_priority' : isEmergency.value,
       'status'           : 'PENDING',
-      'lat'              : _lat,   // always present — checked before this call
+      'lat'              : _lat,
       'lng'              : _lng,
     };
 
@@ -194,12 +169,11 @@ class RequestController extends GetxController {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // Main — orchestrates all 3 steps
-  // serviceId comes from Get.arguments['serviceId'] via the route,
-  // set in home_dashboard_screen when user taps a category card.
+  // Main submit — requestId already exists (initialized from home)
+  // Flow: Location → Media upload → PATCH finalize → Navigate to AI
   // ─────────────────────────────────────────────────────────────────
   Future<void> submitRequest({
-    required int    serviceId,
+    required int    requestId,
     required String description,
     required String address,
     required String zipCode,
@@ -222,33 +196,29 @@ class RequestController extends GetxController {
     try {
       isLoading.value = true;
 
-      // ── Location is MANDATORY — abort if not obtained ──────────
+      // ── Location is MANDATORY ──────────────────────────────────
       final bool locationOk = await _fetchLocation();
       if (!locationOk) return;
 
-      // ── Step 1: Initialize draft ───────────────────────────────
-      _draftRequestId = await _initializeRequest(serviceId);
-
-      // ── Step 2: Upload media (if any) ─────────────────────────
+      // ── Step 1: Upload media (if any) ──────────────────────────
       if (selectedImages.isNotEmpty) {
-        await _uploadMediaFiles(_draftRequestId!);
+        await _uploadMediaFiles(requestId);
       }
 
-      // ── Step 3: PATCH to PENDING ───────────────────────────────
+      // ── Step 2: PATCH to PENDING ───────────────────────────────
       await _finalizeRequest(
-        requestId  : _draftRequestId!,
+        requestId  : requestId,
         description: description,
         address    : address,
         zipCode    : zipCode,
         phoneNumber: phoneNumber,
       );
 
-      // ── Navigate ───────────────────────────────────────────────
+      // ── Navigate to AI analysis ────────────────────────────────
       Get.toNamed(
         RouteName.newRequestAnalysis,
-        arguments: {'request_id': _draftRequestId},
+        arguments: {'request_id': requestId},
       );
-
     } on HttpException catch (e) {
       print('❌ [REQUEST] HttpException: ${e.message}');
       Get.snackbar('Error', e.message);

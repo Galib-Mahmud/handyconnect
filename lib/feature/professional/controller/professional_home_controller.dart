@@ -6,6 +6,8 @@ import 'package:get/get.dart';
 import 'package:handyConnect/core/endpoint/api_client.dart';
 import 'package:handyConnect/core/endpoint/api_endpoint.dart';
 
+import '../../../core/local_storage/user_info.dart';
+
 
 
 class ProfessionalHomeController extends GetxController {
@@ -66,6 +68,13 @@ class ProfessionalHomeController extends GetxController {
       isVerified.value        = profile['is_verified']   ?? false;
       isAvailable.value       = profile['is_available']  ?? false;
       certificates.value      = profile['certificates']  ?? 0;
+
+      // Inside fetchHomepage, after getting profile map:
+      final profileMap = Map<String, dynamic>.from(response['profile'] ?? {});
+      final pid = profileMap['id'];
+      if (pid is int) {
+        await UserInfo.setProviderId(pid);
+      }
 
       // photo is a relative path like "/media/providers/photos/..."
       // prepend base URL so Image.network can load it correctly

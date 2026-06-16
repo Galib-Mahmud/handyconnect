@@ -8,7 +8,7 @@ import '../../../core/local_storage/user_info.dart';
 import '../../chat/controller/chat_controller.dart';
 import '../../chat/screen/chat_screen.dart';
 
-// ── Timeline enums / model ────────────────────────────────────────────────────
+// ── Timeline enums / model ──────────────────────────────────────────
 enum TimelineStatus { completed, active, pending }
 
 class TimelineStep {
@@ -25,33 +25,45 @@ class TimelineStep {
   });
 }
 
-// ── API status order ──────────────────────────────────────────────────────────
-// Maps every possible status string to its position in the timeline.
+// ── API status order ────────────────────────────────────────────────
 const _statusOrder = {
   'PENDING'    : 0,
   'ACCEPTED'   : 1,
   'ON_THE_WAY' : 2,
   'IN_PROGRESS': 3,
   'COMPLETED'  : 4,
+  'REVIEWED'   : 5,
 };
 
-// ── Controller ────────────────────────────────────────────────────────────────
+// ── Controller ──────────────────────────────────────────────────────
 class InProgressController extends GetxController {
   final ApiClient _api = ApiClient(baseUrl: ApiEndpoint.baseUrl);
 
   // ── Observable state ──────────────────────────────────────────────
-  final technicianName  = ''.obs;
-  final technicianImage = ''.obs;
+  final technicianName   = ''.obs;
+  final technicianImage  = ''.obs;
   final technicianRating = 0.0.obs;
   final technicianJobs   = 0.obs;
+  final currentStatus    = 'PENDING'.obs;
 
-  final steps       = <TimelineStep>[].obs;
-  final isLoading   = true.obs;
-  final errorMsg    = ''.obs;
+  final steps    = <TimelineStep>[].obs;
+  final isLoading = true.obs;
+  final errorMsg  = ''.obs;
 
-  // raw API fields — kept for chat args
-  int    get requestId   => UserInfo.getRequestIdSync() ?? 0;
-  String get _myName     => UserInfo.getFullNameSync() ?? '';
+  // ── Interested providers (shown when PENDING) ─────────────────────
+  final RxList<Map<String, dynamic>> interestedProviders =
+      <Map<String, dynamic>>[].obs;
+  final RxBool isLoadingProviders = false.obs;
+  final RxBool isHiring           = false.obs;
+
+  // ── Review state ──────────────────────────────────────────────────
+  final RxInt    reviewRating       = 0.obs;
+  final RxString reviewComment      = ''.obs;
+  final RxBool   isSubmittingReview = false.obs;
+  final RxBool   hasReviewed        = false.obs;
+
+  int    get requestId => UserInfo.getRequestIdSync() ?? 0;
+  String get _myName   => UserInfo.getFullNameSync() ?? '';
 
   Timer? _pollTimer;
 
@@ -59,8 +71,8 @@ class InProgressController extends GetxController {
   void onInit() {
     super.onInit();
     fetchStatus();
-    // Poll every 15 s so the timeline advances without manual refresh
-    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) => fetchStatus());
+    _pollTimer =
+        Timer.periodic(const Duration(seconds: 15), (_) => fetchStatus());
   }
 
   @override
@@ -69,7 +81,7 @@ class InProgressController extends GetxController {
     super.onClose();
   }
 
-  // ── Fetch /services/requests/{id}/ ───────────────────────────────
+  // ── Fetch request status ──────────────────────────────────────────
   Future<void> fetchStatus() async {
     if (requestId == 0) {
       errorMsg.value = 'No active request found.';
@@ -78,27 +90,41 @@ class InProgressController extends GetxController {
     }
 
     try {
-      // Only show full-screen spinner on first load
       if (steps.isEmpty) isLoading.value = true;
       errorMsg.value = '';
 
       final res = await _api.get(
-        '${ApiEndpoint.requests}$requestId/',   // → /services/requests/41/
+        '${ApiEndpoint.requests}$requestId/',
         requiresAuth: true,
       ) as Map<String, dynamic>;
 
-      // ── Provider info ────────────────────────────────────────────
-      technicianName.value  = (res['provider_name']  as String?) ?? 'Professional';
+      technicianName.value =
+          (res['provider_name'] as String?) ?? 'Professional';
       technicianImage.value = (res['provider_photo'] as String?) ?? '';
 
-      // ── Build timeline from status + timeline map ─────────────────
-      final String apiStatus          = (res['status'] as String?) ?? 'PENDING';
-      final Map<String, dynamic> tl   =
+      final String apiStatus = (res['status'] as String?) ?? 'PENDING';
+      currentStatus.value = apiStatus;
+
+      if (apiStatus == 'REVIEWED') hasReviewed.value = true;
+
+      final Map<String, dynamic> tl =
       Map<String, dynamic>.from(res['timeline'] as Map? ?? {});
 
       steps.assignAll(_buildSteps(apiStatus, tl));
 
       print('✅ [IN-PROGRESS] status=$apiStatus  provider=${technicianName.value}');
+
+      // Stop polling once reviewed (terminal state)
+      if (apiStatus == 'REVIEWED') {
+        _pollTimer?.cancel();
+      }
+
+      // Fetch interested providers when PENDING
+      if (apiStatus == 'PENDING') {
+        _fetchInterestedProviders();
+      } else {
+        interestedProviders.clear();
+      }
     } on HttpException catch (e) {
       print('❌ [IN-PROGRESS] HttpException [${e.statusCode}]: ${e.message}');
       errorMsg.value = e.message;
@@ -110,31 +136,153 @@ class InProgressController extends GetxController {
     }
   }
 
-  // ── Build timeline steps from API data ───────────────────────────
+  // ── Fetch interested providers ────────────────────────────────────
+  Future<void> _fetchInterestedProviders() async {
+    if (requestId == 0) return;
+    try {
+      isLoadingProviders.value = true;
+
+      print('📡 [INTERESTED] GET interested-providers for request $requestId');
+
+      final res = await _api.get(
+        ApiEndpoint.interestedProviders(requestId),
+        requiresAuth: true,
+      );
+
+      final List<dynamic> raw =
+      res is List ? res : (res['results'] as List? ?? []);
+
+      final limited = raw.take(3).toList();
+
+      interestedProviders.assignAll(
+        limited.map((e) => Map<String, dynamic>.from(e as Map)),
+      );
+
+      print('✅ [INTERESTED] ${interestedProviders.length} provider(s)');
+    } catch (e) {
+      print('❌ [INTERESTED] Error: $e');
+    } finally {
+      isLoadingProviders.value = false;
+    }
+  }
+
+  // ── Hire a provider ───────────────────────────────────────────────
+  Future<void> hireProvider(int providerId, String providerName) async {
+    if (isHiring.value) return;
+    if (requestId == 0) {
+      Get.snackbar('Error', 'No active request.',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+
+    try {
+      isHiring.value = true;
+
+      print('📡 [HIRE] POST hire-provider/$providerId for request $requestId');
+
+      await _api.post(
+        ApiEndpoint.hireProvider(requestId),
+        body: {'provider_id': providerId},
+        requiresAuth: true,
+      );
+
+      print('✅ [HIRE] $providerName hired!');
+
+      Get.snackbar('Success', '$providerName has been hired!',
+          snackPosition: SnackPosition.BOTTOM);
+
+      await fetchStatus();
+    } on HttpException catch (e) {
+      print('❌ [HIRE] HttpException: ${e.message}');
+      Get.snackbar('Error', e.message, snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      print('❌ [HIRE] Error: $e');
+      Get.snackbar('Error', 'Could not hire provider.',
+          snackPosition: SnackPosition.BOTTOM);
+    } finally {
+      isHiring.value = false;
+    }
+  }
+
+  // ── Submit Review ─────────────────────────────────────────────────
+  // POST /services/requests/{id}/submit-review/
+  void setRating(int stars) => reviewRating.value = stars;
+
+  Future<void> submitReview() async {
+    if (isSubmittingReview.value) return;
+
+    if (reviewRating.value == 0) {
+      Get.snackbar('Rating required', 'Please select a star rating.',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+    if (reviewComment.value.trim().length < 10) {
+      Get.snackbar('Review too short', 'Please write at least 10 characters.',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+    if (requestId == 0) {
+      Get.snackbar('Error', 'No active request.',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+
+    try {
+      isSubmittingReview.value = true;
+
+      print('📡 [REVIEW] POST submit-review/$requestId');
+      print('   body: { rating: ${reviewRating.value}, comment: ${reviewComment.value.trim()} }');
+
+      final res = await _api.post(
+        ApiEndpoint.submitReview(requestId),
+        body: {
+          'rating' : reviewRating.value,
+          'comment': reviewComment.value.trim(),
+        },
+        requiresAuth: true,
+      );
+
+      print('✅ [REVIEW] $res');
+
+      hasReviewed.value = true;
+      currentStatus.value = (res?['status'] as String?) ?? 'REVIEWED';
+      _pollTimer?.cancel();
+
+      Get.snackbar(
+        'Thank you!',
+        (res?['message'] as String?) ?? 'Review submitted.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } on HttpException catch (e) {
+      print('❌ [REVIEW] HttpException: ${e.message}');
+      Get.snackbar('Error', e.message, snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      print('❌ [REVIEW] Error: $e');
+      Get.snackbar('Error', 'Could not submit review.',
+          snackPosition: SnackPosition.BOTTOM);
+    } finally {
+      isSubmittingReview.value = false;
+    }
+  }
+
+  // ── Build timeline steps ──────────────────────────────────────────
   List<TimelineStep> _buildSteps(
-      String apiStatus,
-      Map<String, dynamic> tl,
-      ) {
+      String apiStatus, Map<String, dynamic> tl) {
     final currentOrder = _statusOrder[apiStatus] ?? 0;
 
-    // Each entry: (label, timelineKey, orderIndex)
     final definitions = [
-      ('Request Received', 'request_received', 0),
-      ('Job Accepted',      null,               1),   // no dedicated timestamp
-      ('On The Way',        'on_the_way',        2),
-      ('In Progress',       'in_progress',       3),
-      ('Completed',         'completed',         4),
-      ('Payment',           null,                5),
-      ('Review',            null,                6),
-      ('Closed',            null,                7),
+      ('Pending', 'request_received', 0),
+      ('Job Accepted', null, 1),
+      ('On The Way', 'on_the_way', 2),
+      ('In Progress', 'in_progress', 3),
+      ('Completed', 'completed', 4),
+      ('Reviewed', null, 5),
     ];
 
     return definitions.map((def) {
-      final label      = def.$1;
-      final tlKey      = def.$2;
+      final label = def.$1;
       final orderIndex = def.$3;
 
-      // Determine status
       TimelineStatus status;
       if (orderIndex < currentOrder) {
         status = TimelineStatus.completed;
@@ -144,54 +292,53 @@ class InProgressController extends GetxController {
         status = TimelineStatus.pending;
       }
 
-
-
-
-      // Subtitle only on active step
       String? subtitle;
       if (status == TimelineStatus.active) {
         subtitle = _activeSubtitle(apiStatus);
       }
 
       return TimelineStep(
-        label   : label,
+        label: label,
         subtitle: subtitle,
-        status  : status,
-
+        status: status,
       );
     }).toList();
   }
 
   String _activeSubtitle(String apiStatus) {
     switch (apiStatus) {
-      case 'PENDING'    : return 'Waiting for a provider to accept…';
-      case 'ACCEPTED'   : return 'A professional has accepted your request.';
-      case 'ON_THE_WAY' : return "Your professional is on the way!";
-      case 'IN_PROGRESS': return 'Work is currently in progress.';
-      case 'COMPLETED'  : return 'Job completed successfully.';
-      default           : return '';
+      case 'PENDING':
+        return 'Waiting for a provider to accept…';
+      case 'ACCEPTED':
+        return 'A professional has accepted your request.';
+      case 'ON_THE_WAY':
+        return "Your professional is on the way!";
+      case 'IN_PROGRESS':
+        return 'Work is currently in progress.';
+      case 'COMPLETED':
+        return 'Job completed — please leave a review.';
+      case 'REVIEWED':
+        return 'Thank you for your review!';
+      default:
+        return '';
     }
   }
 
-  // ── Cancel ───────────────────────────────────────────────────────
   void cancelOrder() => Get.back();
 
-  // ── Open chat ────────────────────────────────────────────────────
   void openChat() {
-    // Delete old instance if exists
     if (Get.isRegistered<ProfessionalChatController>()) {
       Get.delete<ProfessionalChatController>(force: true);
     }
 
-    // ✅ Pass real values directly — no Get.arguments needed
     Get.to(
           () => ProfessionalChatScreen(
-           controller: ProfessionalChatController(
-          requestId  : requestId,
-          clientName : technicianName.value,
-          jobLabel   : 'Job #$requestId',
+        controller: ProfessionalChatController(
+          requestId: requestId,
+          clientName: technicianName.value,
+          jobLabel: 'Job #$requestId',
           clientPhoto: technicianImage.value,
-          myFullName : _myName,
+          myFullName: _myName,
         ),
       ),
     );

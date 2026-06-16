@@ -5,7 +5,10 @@ import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:handyConnect/feature/customer/screen/recent_request_screen.dart';
 
+import '../../../core/local_storage/user_info.dart';
 import '../../../route/route_name.dart';
+import '../../chat/controller/chat_controller.dart';
+import '../../chat/screen/chat_screen.dart';
 import '../controller/home_dashboard_controller.dart';
 import 'customer_in_progress_screen.dart';
 import 'notification_screen.dart';
@@ -52,6 +55,93 @@ class HomeDashboardScreen extends StatelessWidget {
         }),
       ),
     );
+  }
+
+  // ───────────────────── Open Chat ───────────────────────────────────
+  void _openChat() {
+    final requestId = UserInfo.getRequestIdSync();
+
+    if (requestId == null || requestId == 0) {
+      Get.snackbar(
+        'No active chat',
+        'You have no active request to chat about.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    final myName = UserInfo.getFullNameSync() ?? '';
+
+    final controller = ProfessionalChatController(
+      requestId : requestId,
+      myFullName: myName,
+    );
+
+    Get.to(() => ProfessionalChatScreen(controller: controller));
+  }
+
+  // ───────────────── Initialize & Navigate ───────────────────────────
+  /// Called when user taps a service card.
+  /// POST initialize → save requestId → navigate to form with full response.
+  void _initializeAndNavigate(
+      HomeController ctrl, Map<String, dynamic> category) async {
+    // Show loading overlay
+    Get.dialog(
+      Center(
+        child: Container(
+          padding: EdgeInsets.all(28.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 40.w,
+                height: 40.w,
+                child: const CircularProgressIndicator(
+                  color: Color(0xFFF8C106),
+                  strokeWidth: 3,
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                'Setting up your request…',
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: const Color(0xFF757575),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+      barrierColor: Colors.black26,
+    );
+
+    final result = await ctrl.initializeRequest(category['id']);
+
+    // Dismiss loading dialog
+    if (Get.isDialogOpen ?? false) Get.back();
+
+    if (result != null) {
+      Get.toNamed(
+        RouteName.newRequest,
+        arguments: {
+          'requestId'     : result['id'],
+          'serviceDetails': result,
+        },
+      );
+    }
   }
 
   // ───────────────────────── Header ──────────────────────────────────
@@ -109,6 +199,17 @@ class HomeDashboardScreen extends StatelessWidget {
               );
             }),
           ),
+          // ── Message icon ──
+          GestureDetector(
+            onTap: () => _openChat(),
+            child: Icon(
+              Icons.chat_bubble_outline_rounded,
+              color: const Color(0xFF424242),
+              size: 24.sp,
+            ),
+          ),
+          SizedBox(width: 16.w),
+          // ── Notification icon ──
           GestureDetector(
             onTap: () {
               ctrl.fetchNotifications();
@@ -275,12 +376,7 @@ class HomeDashboardScreen extends StatelessWidget {
             final category = ctrl.categories[index];
             return _buildServiceCard(
               category: category,
-              onTap: () {
-                Get.toNamed(
-                  RouteName.newRequest,
-                  arguments: {'serviceId': category['id']},
-                );
-              },
+              onTap: () => _initializeAndNavigate(ctrl, category),
             );
           },
         ),
@@ -289,7 +385,6 @@ class HomeDashboardScreen extends StatelessWidget {
   }
 
   // ───────────────────── Dynamic Icon Widget ─────────────────────────
-  /// Renders an emoji string in a colored circle, or falls back to an asset image.
   Widget _buildIconWidget({
     required String icon,
     String? colorHex,
@@ -324,7 +419,6 @@ class HomeDashboardScreen extends StatelessWidget {
       );
     }
 
-    // Fallback: named asset string
     final assetPath = HomeController.assetFromString(icon);
     return Image.asset(
       assetPath,
@@ -362,7 +456,6 @@ class HomeDashboardScreen extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Dynamic Icon
             _buildIconWidget(
               icon: icon,
               colorHex: colorHex,
@@ -370,7 +463,6 @@ class HomeDashboardScreen extends StatelessWidget {
               isCircle: true,
             ),
             SizedBox(width: 14.w),
-            // Title + Date
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,7 +486,6 @@ class HomeDashboardScreen extends StatelessWidget {
                 ],
               ),
             ),
-            // Status Badge
             Container(
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
               decoration: BoxDecoration(

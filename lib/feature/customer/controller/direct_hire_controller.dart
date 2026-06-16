@@ -5,9 +5,9 @@ import 'package:get/get.dart';
 import '../../../core/endpoint/api_client.dart';
 import '../../../core/endpoint/api_endpoint.dart';
 import '../../../core/local_storage/user_info.dart';
-import '../../../route/route_name.dart';          // adjust to your route path
+import '../../../route/route_name.dart';
 
-// ── Model ──────────────────────────────────────────────────────────
+// ── List Model ─────────────────────────────────────────────────────
 class ProviderModel {
   final int id;
   final String fullName;
@@ -29,13 +29,84 @@ class ProviderModel {
 
   factory ProviderModel.fromJson(Map<String, dynamic> json) {
     return ProviderModel(
-      id          : json['id']            as int,
-      fullName    : (json['full_name']     as String?) ?? '',
+      id          : json['id'] as int,
+      fullName    : (json['full_name'] as String?) ?? 'Professional',
       categoryName: (json['category_name'] as String?) ?? '',
-      profilePhoto: json['profile_photo']  as String?,
-      zipCode     : json['zip_code']       as String?,
-      isVerified  : (json['is_verified']   as bool?)   ?? false,
-      rating      : (json['rating']        as String?) ?? '0.00',
+      profilePhoto: json['profile_photo'] as String?,
+      zipCode     : json['zip_code'] as String?,
+      isVerified  : (json['is_verified'] as bool?) ?? false,
+      rating      : (json['rating'] as String?) ?? '0.00',
+    );
+  }
+}
+
+// ── Detail Model ───────────────────────────────────────────────────
+class ProviderDetailModel {
+  final int id;
+  final String fullName;
+  final String email;
+  final String bio;
+  final String? profilePhoto;
+  final String? zipCode;
+  final bool isVerified;
+  final int radiusKm;
+  final int jobsCount;
+  final double averageRating;
+  final int reviewCount;
+  final Map<String, int> ratingBreakdown;
+  final List<Map<String, dynamic>> services;
+  final List<dynamic> recentReviews;
+  final Map<String, dynamic> verificationStatus;
+
+  const ProviderDetailModel({
+    required this.id,
+    required this.fullName,
+    required this.email,
+    required this.bio,
+    this.profilePhoto,
+    this.zipCode,
+    required this.isVerified,
+    required this.radiusKm,
+    required this.jobsCount,
+    required this.averageRating,
+    required this.reviewCount,
+    required this.ratingBreakdown,
+    required this.services,
+    required this.recentReviews,
+    required this.verificationStatus,
+  });
+
+  factory ProviderDetailModel.fromJson(Map<String, dynamic> json) {
+    // Parse rating breakdown
+    final rawBreakdown = json['rating_breakdown'];
+    final Map<String, int> breakdown = {};
+    if (rawBreakdown is Map) {
+      for (final e in rawBreakdown.entries) {
+        breakdown[e.key.toString()] = (e.value as num?)?.toInt() ?? 0;
+      }
+    }
+
+    return ProviderDetailModel(
+      id               : json['id'] as int,
+      fullName         : (json['full_name'] as String?) ?? 'Professional',
+      email            : (json['email'] as String?) ?? '',
+      bio              : (json['bio'] as String?) ?? '',
+      profilePhoto     : json['profile_photo'] as String?,
+      zipCode          : json['zip_code'] as String?,
+      isVerified       : (json['is_verified'] as bool?) ?? false,
+      radiusKm         : (json['radius_km'] as num?)?.toInt() ?? 0,
+      jobsCount        : (json['jobs_count'] as num?)?.toInt() ?? 0,
+      averageRating    : (json['average_rating'] as num?)?.toDouble() ?? 0.0,
+      reviewCount      : (json['review_count'] as num?)?.toInt() ?? 0,
+      ratingBreakdown  : breakdown,
+      services         : (json['services'] as List?)
+          ?.map((e) => Map<String, dynamic>.from(e as Map))
+          .toList() ??
+          [],
+      recentReviews    : (json['recent_reviews'] as List?) ?? [],
+      verificationStatus: (json['verification_status'] is Map)
+          ? Map<String, dynamic>.from(json['verification_status'] as Map)
+          : {},
     );
   }
 }
@@ -44,46 +115,50 @@ class ProviderModel {
 class DirectHireController extends GetxController {
   final ApiClient _apiClient = ApiClient(baseUrl: ApiEndpoint.baseUrl);
 
-  // ── State ──────────────────────────────────────────────────────────
-  final RxList<ProviderModel> providers = <ProviderModel>[].obs;
-  final RxBool isLoadingProviders       = false.obs;
-  final RxBool isSending                = false.obs;
-  final RxString errorMessage           = ''.obs;
+  final int serviceId;
+  final int requestId;
 
-  // requestId saved by ConfirmRequestScreen via UserInfo.setRequestId()
-  int get _requestId => UserInfo.getRequestIdSync() ?? 0;
+  DirectHireController({
+    required this.serviceId,
+    required this.requestId,
+  });
+
+  // ── State ──────────────────────────────────────────────────────────
+  final RxList<ProviderModel> providers  = <ProviderModel>[].obs;
+  final RxBool isLoadingProviders        = false.obs;
+  final RxBool isLoadingDetails          = false.obs;
+  final RxBool isSending                 = false.obs;
+  final RxString errorMessage            = ''.obs;
+
+  // Currently viewed provider details (for popup)
+  final Rx<ProviderDetailModel?> selectedProvider = Rx(null);
 
   @override
   void onInit() {
     super.onInit();
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     print('🏗️  [DIRECT HIRE] Controller initialised');
-    print('   requestId from UserInfo: $_requestId');
+    print('   serviceId : $serviceId');
+    print('   requestId : $requestId');
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-    // STEP 1 — fetch providers as soon as screen opens
     fetchProviders();
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // STEP 1 — GET /services/providers/
-  // Called automatically on screen open.
-  // The Send Request button is disabled while this is loading.
+  // STEP 1 — GET /services/providers/?service_id=X
   // ─────────────────────────────────────────────────────────────────
   Future<void> fetchProviders() async {
     try {
       isLoadingProviders.value = true;
-      errorMessage.value       = '';
+      errorMessage.value = '';
 
-      print('');
-      print('📡 [DIRECT HIRE] ── STEP 1: GET providers ──────────────');
-      print('   endpoint : ${ApiEndpoint.provider}');
-      print('   token    : ${_tokenPreview()}');
+      final endpoint = serviceId > 0
+          ? '${ApiEndpoint.provider}?service_id=$serviceId'
+          : ApiEndpoint.provider;
 
-      final res = await _apiClient.get(
-        ApiEndpoint.provider,   // → /services/providers/
-        requiresAuth: true,
-      );
+      print('📡 [DIRECT HIRE] GET $endpoint');
+
+      final res = await _apiClient.get(endpoint, requiresAuth: true);
 
       final List<dynamic> raw =
       res is List ? res : (res['results'] as List? ?? []);
@@ -93,21 +168,13 @@ class DirectHireController extends GetxController {
             ProviderModel.fromJson(Map<String, dynamic>.from(e as Map))),
       );
 
-      print('✅ [DIRECT HIRE] STEP 1 SUCCESS — ${providers.length} provider(s):');
-      for (final p in providers) {
-        print('   [${p.id}] ${p.fullName}'
-            ' | verified: ${p.isVerified}'
-            ' | zip: ${p.zipCode ?? "—"}'
-            ' | rating: ${p.rating}'
-            ' | photo: ${p.profilePhoto ?? "none"}');
-      }
-      print('────────────────────────────────────────────────────────');
+      print('✅ [DIRECT HIRE] ${providers.length} provider(s) loaded');
     } on HttpException catch (e) {
-      print('❌ [DIRECT HIRE] STEP 1 FAILED — HttpException [${e.statusCode}]: ${e.message}');
+      print('❌ [DIRECT HIRE] Providers error: ${e.message}');
       errorMessage.value = e.message;
       Get.snackbar('Error', e.message, snackPosition: SnackPosition.BOTTOM);
     } catch (e) {
-      print('❌ [DIRECT HIRE] STEP 1 FAILED — unknown: $e');
+      print('❌ [DIRECT HIRE] Providers error: $e');
       errorMessage.value = 'Could not load professionals.';
       Get.snackbar('Error', 'Could not load professionals.',
           snackPosition: SnackPosition.BOTTOM);
@@ -117,28 +184,48 @@ class DirectHireController extends GetxController {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // STEP 2 — POST /services/requests/{requestId}/send-offer/
-  // Only callable after STEP 1 succeeds (button blocked while loading).
-  // On success → navigate to in-progress screen.
+  // STEP 2 — GET /services/providers/{id}/  (for popup)
   // ─────────────────────────────────────────────────────────────────
-  Future<void> sendRequest(int providerId, String providerName) async {
-    // Guard: providers must be loaded first
-    if (isLoadingProviders.value) {
-      print('⚠️  [DIRECT HIRE] STEP 2 blocked — providers still loading');
-      Get.snackbar('Please wait', 'Loading professionals…',
+  Future<ProviderDetailModel?> fetchProviderDetails(int providerId) async {
+    try {
+      isLoadingDetails.value = true;
+      selectedProvider.value = null;
+
+      print('📡 [DIRECT HIRE] GET provider details: $providerId');
+
+      final res = await _apiClient.get(
+        ApiEndpoint.providerDetails(providerId),
+        requiresAuth: true,
+      );
+
+      final detail = ProviderDetailModel.fromJson(
+          Map<String, dynamic>.from(res as Map));
+
+      selectedProvider.value = detail;
+      print('✅ [DIRECT HIRE] Provider detail loaded: ${detail.fullName}');
+      return detail;
+    } on HttpException catch (e) {
+      print('❌ [DIRECT HIRE] Detail error: ${e.message}');
+      Get.snackbar('Error', e.message, snackPosition: SnackPosition.BOTTOM);
+      return null;
+    } catch (e) {
+      print('❌ [DIRECT HIRE] Detail error: $e');
+      Get.snackbar('Error', 'Could not load details.',
           snackPosition: SnackPosition.BOTTOM);
-      return;
+      return null;
+    } finally {
+      isLoadingDetails.value = false;
     }
+  }
 
-    // Guard: no duplicate taps
-    if (isSending.value) {
-      print('⚠️  [DIRECT HIRE] STEP 2 blocked — already sending');
-      return;
-    }
+  // ─────────────────────────────────────────────────────────────────
+  // STEP 3 — POST /services/providers/{id}/invite/
+  // Body: { "request_id": N }
+  // ─────────────────────────────────────────────────────────────────
+  Future<void> inviteProvider(int providerId, String providerName) async {
+    if (isSending.value) return;
 
-    // Guard: request id must be saved
-    if (_requestId == 0) {
-      print('⚠️  [DIRECT HIRE] STEP 2 blocked — no requestId in UserInfo');
+    if (requestId == 0) {
       Get.snackbar('Error', 'No active request found.',
           snackPosition: SnackPosition.BOTTOM);
       return;
@@ -147,47 +234,32 @@ class DirectHireController extends GetxController {
     try {
       isSending.value = true;
 
-      print('');
-      print('📡 [DIRECT HIRE] ── STEP 2: POST send-offer ────────────');
-      print('   endpoint   : ${ApiEndpoint.sendOffer(_requestId)}');
-      print('   requestId  : $_requestId');
-      print('   providerId : $providerId');
-      print('   provider   : $providerName');
-      print('   body       : { "direct_hire_provider_id": $providerId }');
-      print('   token      : ${_tokenPreview()}');
+      print('📡 [DIRECT HIRE] POST invite provider $providerId');
+      print('   endpoint : ${ApiEndpoint.inviteProvider(providerId)}');
+      print('   body     : { "request_id": $requestId }');
 
       final response = await _apiClient.post(
-        ApiEndpoint.sendOffer(_requestId),
-        body: {'direct_hire_provider_id': providerId},
+        ApiEndpoint.inviteProvider(providerId),
+        body: {'request_id': requestId},
         requiresAuth: true,
       );
 
-      print('✅ [DIRECT HIRE] STEP 2 SUCCESS');
+      print('✅ [DIRECT HIRE] Invite sent to $providerName');
       print('   response: $response');
-      print('────────────────────────────────────────────────────────');
-      print('');
-      print('🚀 [DIRECT HIRE] Navigating to in-progress screen...');
 
-      // STEP 3 — navigate immediately after successful POST
+      Get.snackbar('Sent!', 'Request sent to $providerName',
+          snackPosition: SnackPosition.BOTTOM);
+
       Get.toNamed(RouteName.customerinProgress);
-
     } on HttpException catch (e) {
-      print('❌ [DIRECT HIRE] STEP 2 FAILED — HttpException [${e.statusCode}]: ${e.message}');
-      print('   body: ${e.body}');
+      print('❌ [DIRECT HIRE] Invite error: ${e.message}');
       Get.snackbar('Error', e.message, snackPosition: SnackPosition.BOTTOM);
     } catch (e) {
-      print('❌ [DIRECT HIRE] STEP 2 FAILED — unknown: $e');
-      Get.snackbar('Error', 'Could not send request. Please try again.',
+      print('❌ [DIRECT HIRE] Invite error: $e');
+      Get.snackbar('Error', 'Could not send request.',
           snackPosition: SnackPosition.BOTTOM);
     } finally {
       isSending.value = false;
     }
-  }
-
-  // ── Token preview for debug (shows first 20 chars only) ───────────
-  String _tokenPreview() {
-    final token = UserInfo.getAccessTokenSync() ?? '';
-    if (token.isEmpty) return 'NO TOKEN';
-    return '${token.substring(0, token.length.clamp(0, 20))}…';
   }
 }

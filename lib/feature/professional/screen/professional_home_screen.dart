@@ -3,14 +3,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:handyConnect/core/local_storage/user_info.dart';
+import 'package:handyConnect/feature/chat/controller/chat_controller.dart';
+import 'package:handyConnect/feature/chat/screen/chat_screen.dart';
 import 'package:handyConnect/feature/customer/screen/notification_screen.dart';
 import 'package:handyConnect/feature/extra/controller/report_issue_controller.dart';
 import 'package:handyConnect/feature/professional/controller/professional_home_controller.dart';
 import 'package:handyConnect/feature/professional/screen/active_job_screen.dart';
 
 import '../main_screen_1.dart';
-
-
 
 class ProfessionalHomeScreen extends StatelessWidget {
   const ProfessionalHomeScreen({super.key});
@@ -54,7 +55,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
                     badge: c.activeJobs.length.toString(),
                     showViewAll: c.activeJobs.isNotEmpty,
                     onViewAll: () {
-                      Get.offAll(() => MainScreen1(initialIndex: 1)); // Rebuilds with correct tab
+                      Get.offAll(() => MainScreen1(initialIndex: 1));
                     },
                   )),
                   SizedBox(height: 10.h),
@@ -77,7 +78,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
                     badge: c.emergencyRequests.length.toString(),
                     showViewAll: c.emergencyRequests.isNotEmpty,
                     onViewAll: () {
-                      Get.offAll(() => MainScreen1(initialIndex: 1)); // Rebuilds with correct tab
+                      Get.offAll(() => MainScreen1(initialIndex: 1));
                     },
                   )),
                   SizedBox(height: 10.h),
@@ -103,7 +104,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
                     badge: c.newRequests.length.toString(),
                     showViewAll: c.newRequests.isNotEmpty,
                     onViewAll: () {
-                      Get.offAll(() => MainScreen1(initialIndex: 1)); // Rebuilds with correct tab
+                      Get.offAll(() => MainScreen1(initialIndex: 1));
                     },
                   )),
                   SizedBox(height: 10.h),
@@ -132,7 +133,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
                         title: 'Private Requests',
                         badge: c.privateRequests.length.toString(),
                         showViewAll: true,
-                        onViewAll: () {},
+                        onViewAll: () {   Get.offAll(() => MainScreen1(initialIndex: 1));},
                       ),
                       SizedBox(height: 10.h),
                       ...c.privateRequests.map((r) => Padding(
@@ -149,6 +150,52 @@ class ProfessionalHomeScreen extends StatelessWidget {
             ),
           );
         }),
+      ),
+    );
+  }
+
+  // ─────────────────── Open Chat ─────────────────────────────────
+  void _openChat(ProfessionalHomeController c) {
+    if (c.activeJobs.isEmpty) {
+      Get.snackbar(
+        'No active chat',
+        'You have no active jobs to chat about.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    final job = c.activeJobs.first;
+
+    final requestId =
+        (job['id'] ?? job['request_id'] ?? job['request']) as int? ?? 0;
+
+    if (requestId == 0) {
+      Get.snackbar(
+        'Error',
+        'Could not open chat for this job.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    final myName      = UserInfo.getFullNameSync() ?? '';
+    final clientName  = (job['customer_name'] as String?) ?? 'Customer';
+    final clientPhoto = (job['customer_photo'] as String?) ?? '';
+
+    if (Get.isRegistered<ProfessionalChatController>()) {
+      Get.delete<ProfessionalChatController>(force: true);
+    }
+
+    Get.to(
+          () => ProfessionalChatScreen(
+        controller: ProfessionalChatController(
+          requestId  : requestId,
+          clientName : clientName,
+          jobLabel   : 'Job #$requestId',
+          clientPhoto: clientPhoto,
+          myFullName : myName,
+        ),
       ),
     );
   }
@@ -174,8 +221,6 @@ class ProfessionalHomeScreen extends StatelessWidget {
   }
 
   // ─────────────────── Profile Card ──────────────────────────────
-  // Now reads professionalName, professionalImage from the controller,
-  // which are populated by response['profile'] in fetchHomepage()
   Widget _buildProfileCard(ProfessionalHomeController c) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
@@ -210,8 +255,6 @@ class ProfessionalHomeScreen extends StatelessWidget {
           SizedBox(width: 14.w),
 
           // ── Name + Email ───────────────────────────────────────
-          // Role/category is not in homepage response, so we show
-          // email as subtitle (matches the profile JSON structure)
           Expanded(
             child: Obx(() => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,7 +285,8 @@ class ProfessionalHomeScreen extends StatelessWidget {
           Obx(() => c.isVerified.value
               ? Container(
             margin: EdgeInsets.only(right: 8.w),
-            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            padding:
+            EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
             decoration: BoxDecoration(
               color: const Color(0xFFE8F5E9),
               borderRadius: BorderRadius.circular(20.r),
@@ -261,6 +305,16 @@ class ProfessionalHomeScreen extends StatelessWidget {
             ),
           )
               : const SizedBox.shrink()),
+
+          // ── Chat Icon ──────────────────────────────────────────
+          GestureDetector(
+            onTap: () => _openChat(c),
+            child: Padding(
+              padding: EdgeInsets.only(right: 14.w),
+              child: Icon(Icons.chat_bubble_outline_rounded,
+                  color: const Color(0xFF212121), size: 24.sp),
+            ),
+          ),
 
           // ── Notification Bell ──────────────────────────────────
           GestureDetector(
@@ -508,10 +562,11 @@ class ProfessionalHomeScreen extends StatelessWidget {
 
   // ─────────────────── Active Job Card ───────────────────────────
   Widget _buildActiveJobCard(Map<String, dynamic> job, BuildContext context) {
-    final assetPath  = ProfessionalHomeController.assetFromIcon(job['service_icon'] ?? '');
+    final assetPath =
+    ProfessionalHomeController.assetFromIcon(job['service_icon'] ?? '');
     final clientName = job['customer_name'] ?? 'Customer';
-    final address    = job['address'] ?? '';
-    final status     = job['status_display'] ?? job['status'] ?? '';
+    final address = job['address'] ?? '';
+    final status = job['status_display'] ?? job['status'] ?? '';
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -567,15 +622,14 @@ class ProfessionalHomeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               GestureDetector(
-                onTap: () {
-
-                },
+                onTap: () {},
                 child: Icon(Icons.flag_outlined,
                     color: const Color(0xFF9E9E9E), size: 18.sp),
               ),
               SizedBox(height: 6.h),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                padding:
+                EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE3F2FD),
                   borderRadius: BorderRadius.circular(20.r),
@@ -598,15 +652,16 @@ class ProfessionalHomeScreen extends StatelessWidget {
 
   // ─────────────────── Job Request Card ──────────────────────────
   Widget _buildJobRequestCard(Map<String, dynamic> request) {
-    final isSold      = request['is_sold'] ?? false;
-    final assetPath   = ProfessionalHomeController.assetFromIcon(request['service_icon'] ?? '');
+    final isSold = request['is_sold'] ?? false;
+    final assetPath =
+    ProfessionalHomeController.assetFromIcon(request['service_icon'] ?? '');
     final serviceName = request['service_details']?['name_en'] ??
-        request['service_name'] ?? 'Service';
-    final date        = request['formatted_date'] ?? '';
-    // ai_cost is already a formatted String after _normalizeRequest in controller
-    final aiCost      = (request['ai_cost'] as String?) ?? '—';
-    final address     = request['address'] ?? '';
-    final isPriority  = request['mark_as_priority'] ?? false;
+        request['service_name'] ??
+        'Service';
+    final date = request['formatted_date'] ?? '';
+    final aiCost = (request['ai_cost'] as String?) ?? '—';
+    final address = request['address'] ?? '';
+    final isPriority = request['mark_as_priority'] ?? false;
 
     return Stack(
       children: [
@@ -656,7 +711,8 @@ class ProfessionalHomeScreen extends StatelessWidget {
                         Row(
                           children: [
                             Icon(Icons.calendar_today_outlined,
-                                size: 12.sp, color: const Color(0xFF9E9E9E)),
+                                size: 12.sp,
+                                color: const Color(0xFF9E9E9E)),
                             SizedBox(width: 4.w),
                             Text(date,
                                 style: TextStyle(
@@ -667,9 +723,9 @@ class ProfessionalHomeScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // Priority or New badge
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 10.w, vertical: 5.h),
                     decoration: BoxDecoration(
                       color: isPriority
                           ? const Color(0xFFFFEBEE)
@@ -695,7 +751,6 @@ class ProfessionalHomeScreen extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // AI Cost — already formatted string e.g. "EUR 160 – 380"
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -716,7 +771,6 @@ class ProfessionalHomeScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  // Address
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -730,7 +784,8 @@ class ProfessionalHomeScreen extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             Icon(Icons.location_on_outlined,
-                                size: 14.sp, color: const Color(0xFF9E9E9E)),
+                                size: 14.sp,
+                                color: const Color(0xFF9E9E9E)),
                             SizedBox(width: 2.w),
                             Flexible(
                               child: Text(
@@ -757,7 +812,8 @@ class ProfessionalHomeScreen extends StatelessWidget {
           Positioned.fill(
             child: Center(
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                padding:
+                EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                 decoration: BoxDecoration(
                   color: const Color(0xFF474747),
                   borderRadius: BorderRadius.circular(30.r),
@@ -772,7 +828,8 @@ class ProfessionalHomeScreen extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.info_outline, color: Colors.white, size: 16.sp),
+                    Icon(Icons.info_outline,
+                        color: Colors.white, size: 16.sp),
                     SizedBox(width: 8.w),
                     Text(
                       'Lead Already Sold',

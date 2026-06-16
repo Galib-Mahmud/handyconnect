@@ -161,13 +161,33 @@ class ActiveJobController extends GetxController {
   // Multipart: bill_image, before_photo, after_photo
   // ─────────────────────────────────────────────────────────────────
   Future<void> submitBill() async {
-    if (billImageFile == null || beforePhotoFile == null || afterPhotoFile == null) {
+    print('🔍 [BILL] bill=${billImagePath.value}');
+    print('🔍 [BILL] before=${beforePhotoPath.value}');
+    print('🔍 [BILL] after=${afterPhotoPath.value}');
+
+    if (billImageFile == null ||
+        beforePhotoFile == null ||
+        afterPhotoFile == null) {
       _showError('Please attach bill image, before photo, and after photo.');
       return;
     }
+
+    // Verify files actually exist on disk
+    final missing = <String>[];
+    if (!await billImageFile!.exists()) missing.add('bill');
+    if (!await beforePhotoFile!.exists()) missing.add('before');
+    if (!await afterPhotoFile!.exists()) missing.add('after');
+    if (missing.isNotEmpty) {
+      print('❌ [BILL] Files not found on disk: $missing');
+      _showError('Some images could not be found. Please re-select.');
+      return;
+    }
+
     isActionLoading.value = true;
     try {
-      print('📤 [BILL] id=$jobId');
+      print('📤 [BILL] Uploading to id=$jobId');
+      print('   endpoint: ${ApiEndpoint.proSubmitBill(jobId)}');
+
       final res = await _apiClient.multipart(
         ApiEndpoint.proSubmitBill(jobId),
         method: 'POST',
@@ -180,25 +200,28 @@ class ActiveJobController extends GetxController {
         requiresAuth: true,
       );
 
+      print('✅ [BILL] Response: $res');
+
       final newCode = (res?['status'] as String?) ?? 'COMPLETED';
       jobStatusCode.value = newCode;
-      jobStatus.value     = 'Completed';
+      jobStatus.value = 'Completed';
       _rebuildSteps();
 
       Get.snackbar(
         'Done',
         (res?['message'] as String?) ?? 'Job marked as Completed.',
         backgroundColor: const Color(0xFF43A047),
-        colorText      : Colors.white,
-        snackPosition  : SnackPosition.TOP,
-        margin         : const EdgeInsets.all(12),
-        borderRadius   : 10,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(12),
+        borderRadius: 10,
       );
-      print('✅ [BILL] Job completed');
     } on HttpException catch (e) {
+      print('❌ [BILL] HttpException [${e.statusCode}]: ${e.message}');
+      print('❌ [BILL] Body: ${e.body}');
       _showError(e.message);
     } catch (e) {
-      print('❌ [BILL] $e');
+      print('❌ [BILL] Unknown error: $e');
       _showError('Failed to submit bill.');
     } finally {
       isActionLoading.value = false;

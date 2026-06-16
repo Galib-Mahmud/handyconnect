@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:handyConnect/core/endpoint/api_client.dart';
 import 'package:handyConnect/core/endpoint/api_endpoint.dart';
+import 'package:handyConnect/core/local_storage/user_info.dart';
 
 class HomeController extends GetxController {
   final ApiClient _apiClient = ApiClient(baseUrl: ApiEndpoint.baseUrl);
@@ -37,17 +38,17 @@ class HomeController extends GetxController {
 
       final String endpoint = search.trim().isEmpty
           ? ApiEndpoint.customerHomepage
-          : '${ApiEndpoint.customerHomepage}?search=${search.trim()}';
+          : '${ApiEndpoint.customerHomepage}?search=${Uri.encodeComponent(search.trim())}';
 
       print('🏠 [HOME] Fetching: $endpoint');
 
       final response = await _apiClient.get(endpoint);
 
-      print('✅ [HOME] Response: $response');
+      print('✅ [HOME] Response received');
 
-      profile.value        = Map<String, dynamic>.from(response['profile']);
-      recentRequests.value = List<Map<String, dynamic>>.from(response['recent_requests']);
-      categories.value     = List<Map<String, dynamic>>.from(response['categories']);
+      profile.value        = Map<String, dynamic>.from(response['profile'] ?? {});
+      recentRequests.value = List<Map<String, dynamic>>.from(response['recent_requests'] ?? []);
+      categories.value     = List<Map<String, dynamic>>.from(response['categories'] ?? []);
 
       print('👤 Profile    : ${profile.value}');
       print('📋 Recent     : ${recentRequests.length} items');
@@ -63,6 +64,34 @@ class HomeController extends GetxController {
     }
   }
 
+  // ── Initialize Request (called when service card tapped) ──────────
+  /// POST /services/requests/initialize/
+  /// Returns full response map on success, null on failure.
+  Future<Map<String, dynamic>?> initializeRequest(int serviceId) async {
+    try {
+      print('🚀 [INIT] Initializing with service id: $serviceId');
+
+      final response = await _apiClient.post(
+        ApiEndpoint.initializeRequest,
+        body: {'service': serviceId},
+      );
+
+      final int requestId = response['id'] as int;
+      await UserInfo.setRequestId(requestId);
+
+      print('✅ [INIT] Draft request created. ID: $requestId');
+      return Map<String, dynamic>.from(response);
+    } on HttpException catch (e) {
+      print('❌ [INIT] HttpException: ${e.message}');
+      Get.snackbar('Error', e.message);
+      return null;
+    } catch (e) {
+      print('❌ [INIT] Error: $e');
+      Get.snackbar('Error', 'Could not create request. Try again.');
+      return null;
+    }
+  }
+
   // ── Fetch All Requests ────────────────────────────────────────────
   Future<void> fetchAllRequests() async {
     try {
@@ -72,7 +101,7 @@ class HomeController extends GetxController {
 
       final response = await _apiClient.get(ApiEndpoint.allCustomerRequests);
 
-      print('✅ [ALL REQUESTS] Response: $response');
+      print('✅ [ALL REQUESTS] Response received');
 
       if (response is List) {
         allRequests.value = List<Map<String, dynamic>>.from(response);
@@ -103,8 +132,6 @@ class HomeController extends GetxController {
 
       final response = await _apiClient.get(ApiEndpoint.notifications);
 
-      print('✅ [NOTIFICATIONS] Response: $response');
-
       if (response is List) {
         notifications.value = List<Map<String, dynamic>>.from(response);
       } else if (response is Map && response.containsKey('results')) {
@@ -122,15 +149,12 @@ class HomeController extends GetxController {
   }
 
   // ── Helper: Detect Emoji ──────────────────────────────────────────
-  /// Returns true if the string contains emoji characters (Unicode > U+00FF),
-  /// meaning the API sent an emoji icon rather than a named asset string.
   static bool isEmoji(String value) {
     if (value.isEmpty) return false;
-    // Any character above the basic Latin/extended-Latin range is treated as emoji
     return value.runes.any((rune) => rune > 0x00FF);
   }
 
-  // ── Helper: icon string → asset path (legacy named icons) ─────────
+  // ── Helper: icon string → asset path ──────────────────────────────
   static String assetFromString(String icon) {
     const map = {
       'water_drop'     : 'assets/images/profile/water.png',
@@ -143,19 +167,7 @@ class HomeController extends GetxController {
     return map[icon] ?? 'assets/images/profile/water.png';
   }
 
-  // ── Helper: Parse hex color string → Color ────────────────────────
-  /// Safely parses a hex string like "#F54927" into a Flutter Color.
-  static Color? parseColor(String? hex) {
-    if (hex == null || hex.isEmpty) return null;
-    try {
-      final cleaned = hex.replaceAll('#', '');
-      return Color(int.parse('FF$cleaned', radix: 16));
-    } catch (_) {
-      return null;
-    }
-  }
-
-  // ── Helper: status → text color ──────────────────────────────────
+  // ── Helper: status → text color ───────────────────────────────────
   static Color statusColor(String status) {
     switch (status.toUpperCase()) {
       case 'PENDING'    : return const Color(0xFFFFA726);
@@ -167,7 +179,7 @@ class HomeController extends GetxController {
     }
   }
 
-  // ── Helper: status → background color ────────────────────────────
+  // ── Helper: status → background color ─────────────────────────────
   static Color statusBgColor(String status) {
     switch (status.toUpperCase()) {
       case 'PENDING'    : return const Color(0xFFFFF3E0);

@@ -1,6 +1,5 @@
 // lib/features/professional/job_requests/controller/job_requests_controller.dart
 
-import 'dart:io';
 import 'package:get/get.dart';
 import 'package:handyConnect/core/endpoint/api_client.dart';
 import 'package:handyConnect/core/endpoint/api_endpoint.dart';
@@ -131,16 +130,16 @@ class JobRequestsController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
 
-  // Selected filter type
+  // Tracks which request id is currently being responded to (for button spinner)
+  final RxInt respondingId = 0.obs;
+
   final Rx<RequestFilterType> selectedFilter = RequestFilterType.active.obs;
 
-  // Request lists for each filter type
   final RxList<ServiceRequestModel> activeRequests = <ServiceRequestModel>[].obs;
   final RxList<ServiceRequestModel> privateRequests = <ServiceRequestModel>[].obs;
   final RxList<ServiceRequestModel> emergencyRequests = <ServiceRequestModel>[].obs;
   final RxList<ServiceRequestModel> newRequests = <ServiceRequestModel>[].obs;
 
-  // Pagination
   final RxMap<String, String?> nextPages = {
     'active': null,
     'private': null,
@@ -174,21 +173,20 @@ class JobRequestsController extends GetxController {
       final response = await _apiClient.get(
         endpoint,
         requiresAuth: true,
-        queryParameters: nextPages[key] != null ? {'page': nextPages[key]} : null,
+        queryParameters:
+        nextPages[key] != null ? {'page': nextPages[key]} : null,
       );
 
-      final List<dynamic> raw = response['results'] is List
-          ? response['results'] as List
-          : [];
+      final List<dynamic> raw =
+      response['results'] is List ? response['results'] as List : [];
 
-      final newList = raw.map((e) => ServiceRequestModel.fromJson(
+      final newList = raw
+          .map((e) => ServiceRequestModel.fromJson(
         Map<String, dynamic>.from(e as Map),
-      )).toList();
+      ))
+          .toList();
 
-      // Update appropriate list
       _updateListByFilter(type, newList);
-
-      // Update pagination
       nextPages[key] = response['next'] as String?;
 
       print('✅ [FETCH] Loaded ${newList.length} ${type.name} requests');
@@ -198,49 +196,52 @@ class JobRequestsController extends GetxController {
       Get.snackbar('Error', e.message, snackPosition: SnackPosition.BOTTOM);
     } catch (e) {
       print('❌ [FETCH] $e');
-      Get.snackbar('Error', 'Something went wrong.', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('Error', 'Something went wrong.',
+          snackPosition: SnackPosition.BOTTOM);
     } finally {
       isLoading.value = false;
     }
   }
 
-  // ── Load More (Pagination) ────────────────────────────────────────
   Future<void> loadMore(RequestFilterType type) async {
     final key = _getKeyForFilter(type);
-    if (nextPages[key] == null) return; // No more pages
+    if (nextPages[key] == null) return;
     await fetchRequestsByFilter(type);
   }
 
-  // ── Refresh Current Filter ────────────────────────────────────────
   Future<void> refreshCurrent() async {
     nextPages[_getKeyForFilter(selectedFilter.value)] = null;
     await fetchRequestsByFilter(selectedFilter.value);
   }
 
-  // ── Helper: Get Endpoint for Filter ───────────────────────────────
   String _getEndpointForFilter(RequestFilterType type) {
     switch (type) {
       case RequestFilterType.active:
-        return ApiEndpoint.proActiveRequests; // /services/requests/pro/active/
+        return ApiEndpoint.proActiveRequests;
       case RequestFilterType.private:
-        return ApiEndpoint.proPrivateRequests; // /services/requests/pro/private/
+        return ApiEndpoint.proPrivateRequests;
       case RequestFilterType.emergency:
-        return ApiEndpoint.proEmergencyRequests; // /services/requests/pro/emergency/
+        return ApiEndpoint.proEmergencyRequests;
       case RequestFilterType.newRequest:
-        return ApiEndpoint.proNewRequests; // /services/requests/pro/new/
+        return ApiEndpoint.proNewRequests;
     }
   }
 
   String _getKeyForFilter(RequestFilterType type) {
     switch (type) {
-      case RequestFilterType.active: return 'active';
-      case RequestFilterType.private: return 'private';
-      case RequestFilterType.emergency: return 'emergency';
-      case RequestFilterType.newRequest: return 'new';
+      case RequestFilterType.active:
+        return 'active';
+      case RequestFilterType.private:
+        return 'private';
+      case RequestFilterType.emergency:
+        return 'emergency';
+      case RequestFilterType.newRequest:
+        return 'new';
     }
   }
 
-  void _updateListByFilter(RequestFilterType type, List<ServiceRequestModel> data) {
+  void _updateListByFilter(
+      RequestFilterType type, List<ServiceRequestModel> data) {
     switch (type) {
       case RequestFilterType.active:
         activeRequests.assignAll(data);
@@ -257,7 +258,6 @@ class JobRequestsController extends GetxController {
     }
   }
 
-  // ── Get Current List Based on Selected Filter ─────────────────────
   List<ServiceRequestModel> get currentList {
     switch (selectedFilter.value) {
       case RequestFilterType.active:
@@ -271,25 +271,54 @@ class JobRequestsController extends GetxController {
     }
   }
 
-  bool get hasMore => nextPages[_getKeyForFilter(selectedFilter.value)] != null;
+  bool get hasMore =>
+      nextPages[_getKeyForFilter(selectedFilter.value)] != null;
 
-  // ── Accept Request (Navigate to ActiveJobScreen) ──────────────────
-  Future<void> acceptRequest(int requestId) async {
-    print('✅ [ACCEPT] requestId: $requestId');
+  // ─────────────────────────────────────────────────────────────────
+  // RESPOND (Accept / Apply) — both send {"action":"accept"}
+  // POST /services/requests/{id}/respond/
+  // On success → navigate to ActiveJobScreen with request data.
+  // ─────────────────────────────────────────────────────────────────
+  Future<void> respondToRequest(int requestId) async {
+    if (respondingId.value != 0) return; // prevent double-tap
 
-    // Find request in current list
-    final requestData = currentList.firstWhere(
-          (r) => r.id == requestId,
-      orElse: () => throw Exception('Request not found'),
-    );
-
-    // Remove from new requests if applicable
-    if (selectedFilter.value == RequestFilterType.newRequest) {
-      newRequests.removeWhere((r) => r.id == requestId);
+    final requestData = currentList.firstWhereOrNull((r) => r.id == requestId);
+    if (requestData == null) {
+      Get.snackbar('Error', 'Request not found.',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
     }
 
+    try {
+      respondingId.value = requestId;
+
+      print('📤 [RESPOND] POST respond/ id=$requestId action=accept');
+
+      final res = await _apiClient.post(
+        ApiEndpoint.proRequestRespond(requestId),
+        body: {'action': 'accept'},
+        requiresAuth: true,
+      );
+
+      print('✅ [RESPOND] Success: $res');
+
+      _navigateToActiveJob(requestData);
+    } on HttpException catch (e) {
+      print('❌ [RESPOND] HttpException: ${e.message}');
+      Get.snackbar('Error', e.message, snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      print('❌ [RESPOND] $e');
+      Get.snackbar('Error', 'Could not respond. Please try again.',
+          snackPosition: SnackPosition.BOTTOM);
+    } finally {
+      respondingId.value = 0;
+    }
+  }
+
+  // ── Navigate to Active Job ────────────────────────────────────────
+  void _navigateToActiveJob(ServiceRequestModel requestData) {
     final args = <String, dynamic>{
-      'jobId': requestId,
+      'jobId': requestData.id,
       'customer_name': requestData.customerName,
       'address': requestData.address,
       'customer_photo': requestData.customerPhoto,
@@ -308,37 +337,54 @@ class JobRequestsController extends GetxController {
       'media': requestData.media,
     };
 
-    // Register ActiveJobController
     if (Get.isRegistered<ActiveJobController>()) {
-      await Get.delete<ActiveJobController>(force: true);
+      Get.delete<ActiveJobController>(force: true);
     }
     Get.put(ActiveJobController(), permanent: false);
 
     Get.to(() => const ActiveJobScreen(), arguments: args);
   }
 
-  // ── Decline Request ───────────────────────────────────────────────
-  void declineRequest(int requestId) {
-    print('❌ [DECLINE] Request ID: $requestId');
-    currentList.removeWhere((r) => r.id == requestId);
-    Get.snackbar('Declined', 'Request declined.', snackPosition: SnackPosition.BOTTOM);
-  }
+  // ─────────────────────────────────────────────────────────────────
+  // DECLINE — only for private requests.
+  // POST /services/requests/{id}/respond/  { "action": "decline" }
+  // ─────────────────────────────────────────────────────────────────
+  Future<void> declineRequest(int requestId) async {
+    if (respondingId.value != 0) return;
 
-  // ── Apply to Marketplace Request (if needed) ──────────────────────
-  Future<void> applyToRequest(int requestId) async {
     try {
-      final res = await _apiClient.post(
+      respondingId.value = requestId;
+
+      print('📤 [DECLINE] POST respond/ id=$requestId action=decline');
+
+      await _apiClient.post(
         ApiEndpoint.proRequestRespond(requestId),
-        body: {'action': 'accept'},
+        body: {'action': 'decline'},
         requiresAuth: true,
       );
-      print('✅ [APPLY] Response: $res');
-      refreshCurrent();
 
-    } catch (e) {
-      Get.snackbar('Error', 'Could not apply. Please try again.',
+      // Remove from current list
+      currentList.removeWhere((r) => r.id == requestId);
+
+      Get.snackbar('Declined', 'Request declined.',
           snackPosition: SnackPosition.BOTTOM);
+    } on HttpException catch (e) {
+      print('❌ [DECLINE] HttpException: ${e.message}');
+      Get.snackbar('Error', e.message, snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      print('❌ [DECLINE] $e');
+      // Fallback: still remove locally
+      currentList.removeWhere((r) => r.id == requestId);
+    } finally {
+      respondingId.value = 0;
     }
+  }
+
+  // ── View active job (for already-active filter) ───────────────────
+  void viewActiveJob(int requestId) {
+    final requestData = currentList.firstWhereOrNull((r) => r.id == requestId);
+    if (requestData == null) return;
+    _navigateToActiveJob(requestData);
   }
 
   // ── Static Helpers ────────────────────────────────────────────────
@@ -371,14 +417,16 @@ class JobRequestsController extends GetxController {
 
   static JobStatus statusFromString(String status) {
     switch (status.toUpperCase()) {
-      case 'COMPLETED': return JobStatus.completed;
+      case 'COMPLETED':
+        return JobStatus.completed;
       case 'IN_PROCESS':
       case 'IN_PROGRESS':
       case 'ON_THE_WAY':
       case 'CONFIRMED':
       case 'ACCEPTED':
         return JobStatus.inProcess;
-      default: return JobStatus.pending;
+      default:
+        return JobStatus.pending;
     }
   }
 }

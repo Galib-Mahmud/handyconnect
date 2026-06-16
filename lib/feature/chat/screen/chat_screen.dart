@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+
 import '../controller/chat_controller.dart';
 
 class ProfessionalChatScreen extends StatelessWidget {
-  final ProfessionalChatController controller;
+  final   ProfessionalChatController controller;
 
   const ProfessionalChatScreen({
     super.key,
@@ -17,7 +18,7 @@ class ProfessionalChatScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      appBar: _buildAppBar(c),        // ✅ passes c explicitly
+      appBar: _buildAppBar(c),
       body: Column(
         children: [
           Expanded(child: _MessageList(c: c)),
@@ -27,7 +28,6 @@ class ProfessionalChatScreen extends StatelessWidget {
     );
   }
 
-  // ✅ c passed as parameter — no longer relies on Get.arguments
   PreferredSizeWidget _buildAppBar(ProfessionalChatController c) {
     return AppBar(
       backgroundColor: Colors.white,
@@ -53,21 +53,37 @@ class ProfessionalChatScreen extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                c.clientName,
+              Obx(() => Text(
+                c.clientName.value.isEmpty ? 'Chat' : c.clientName.value,
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
-              ),
-              Text(
-                c.jobLabel,
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  color: const Color(0xFFFFB300),
-                  fontWeight: FontWeight.w500,
-                ),
+              )),
+              Row(
+                children: [
+                  Text(
+                    c.jobLabel,
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: const Color(0xFFFFB300),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(width: 6.w),
+                  // Connection status dot
+                  Obx(() => Container(
+                    width: 8.w,
+                    height: 8.w,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: c.isConnected.value
+                          ? const Color(0xFF4CAF50)
+                          : const Color(0xFFBDBDBD),
+                    ),
+                  )),
+                ],
               ),
             ],
           ),
@@ -84,6 +100,19 @@ class _MessageList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
+      if (c.isLoading.value && c.messages.isEmpty) {
+        return const Center(
+          child: CircularProgressIndicator(color: Color(0xFFFFB300)),
+        );
+      }
+      if (c.messages.isEmpty) {
+        return Center(
+          child: Text(
+            "No messages yet",
+            style: TextStyle(color: Colors.grey, fontSize: 13.sp),
+          ),
+        );
+      }
       return ListView.builder(
         controller: c.scrollController,
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
@@ -93,7 +122,8 @@ class _MessageList extends StatelessWidget {
             return Center(
               child: Padding(
                 padding: EdgeInsets.only(bottom: 20.h),
-                child: Text("Today", style: TextStyle(color: Colors.grey, fontSize: 12.sp)),
+                child: Text("Today",
+                    style: TextStyle(color: Colors.grey, fontSize: 12.sp)),
               ),
             );
           }
@@ -107,7 +137,7 @@ class _MessageList extends StatelessWidget {
 
 class _ChatBubble extends StatelessWidget {
   const _ChatBubble({required this.message});
-  final dynamic message; // Replace with ChatMessage model
+  final ChatMessage message;
 
   @override
   Widget build(BuildContext context) {
@@ -116,9 +146,11 @@ class _ChatBubble extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(bottom: 16.h),
       child: Column(
-        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment:
+        isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Container(
+            constraints: BoxConstraints(maxWidth: 0.72.sw),
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             decoration: BoxDecoration(
               color: isMe ? const Color(0xFFFFB300) : Colors.white,
@@ -140,7 +172,7 @@ class _ChatBubble extends StatelessWidget {
           ),
           SizedBox(height: 4.h),
           Text(
-            "${message.time}${isMe ? '  •  ${message.status}' : ''}",
+            "${message.time}${isMe && message.status != null ? '  •  ${message.status}' : ''}",
             style: TextStyle(fontSize: 11.sp, color: Colors.grey),
           ),
         ],
@@ -174,6 +206,8 @@ class _BottomInputSection extends StatelessWidget {
             Expanded(
               child: TextField(
                 controller: c.textController,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => c.sendMessage(),
                 decoration: const InputDecoration(
                   hintText: "Type a message...",
                   border: InputBorder.none,
@@ -182,10 +216,10 @@ class _BottomInputSection extends StatelessWidget {
               ),
             ),
             CircleAvatar(
-              backgroundColor: const Color(0xFFE8EAF6),
+              backgroundColor: const Color(0xFFFFB300),
               radius: 18.r,
               child: IconButton(
-                icon: Icon(Icons.send_rounded, color: Colors.grey, size: 18.sp),
+                icon: Icon(Icons.send_rounded, color: Colors.white, size: 18.sp),
                 onPressed: c.sendMessage,
               ),
             ),

@@ -47,6 +47,11 @@ class ApiEndpoint {
   static const String proHomepage        = "/services/requests/pro/homepage/";
   static const String servicesList = '/services/list/';
 
+
+  static String interestedProviders(int id) => '/services/requests/$id/interested-providers/';
+  static String hireProvider(int id) => '/services/requests/$id/hire-provider/';
+  static String submitReview(int id) => '/services/requests/$id/submit-review/';
+
   // lib/core/endpoint/api_endpoint.dart
 
 
@@ -64,7 +69,10 @@ class ApiEndpoint {
   static const String activateSubscription = "/pro/subscription/activate/";
   static String proAdvanceStatus(int id)   => '/services/requests/$id/advance-status/';
   static String proSubmitBill(int id)      => '/services/requests/$id/submit-bill/';
-  static String chatMessages(int id)  => '/requests/$id/messages/';
+  static String chatMessages(int id) => '/services/requests/$id/messages/';
   static String chatWebSocket(int id) => 'ws://handyapi.dsrt321.online/ws/chat/$id/';
   static const String allRequests = '/services/requests/';
+  // ── Provider Details & Invite ─────────────────────────────────────
+  static String providerDetails(int id) => '/services/providers/$id/';
+  static String inviteProvider(int id)  => '/services/providers/$id/invite/';
 }

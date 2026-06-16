@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:handyConnect/feature/professional/screen/active_job_screen.dart';
 import '../../../core/local_storage/user_info.dart';
 import '../../chat/controller/chat_controller.dart';
 import '../../chat/screen/chat_screen.dart';
@@ -24,12 +23,8 @@ class JobRequestsScreen extends StatelessWidget {
             SizedBox(height: 16.h),
             _buildHeader(c),
             SizedBox(height: 12.h),
-
-            // ── Scrollable Filter Chips ─────────────────────────────
             _buildFilterChips(c),
             SizedBox(height: 12.h),
-
-            // ── Request List ────────────────────────────────────────
             Expanded(child: _buildRequestList(c)),
           ],
         ),
@@ -37,16 +32,12 @@ class JobRequestsScreen extends StatelessWidget {
     );
   }
 
-  // ── Header with Title & Refresh ───────────────────────────────────
+  // ── Header ────────────────────────────────────────────────────────
   Widget _buildHeader(JobRequestsController c) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => Get.back(),
-            child: Icon(Icons.arrow_back, size: 22.sp, color: const Color(0xFF212121)),
-          ),
           SizedBox(width: 14.w),
           Text(
             'Job Requests',
@@ -57,13 +48,16 @@ class JobRequestsScreen extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          // Refresh
           Obx(() => GestureDetector(
             onTap: c.isLoading.value ? null : c.refreshCurrent,
             child: Icon(
-              c.isLoading.value ? Icons.hourglass_bottom : Icons.refresh,
+              c.isLoading.value
+                  ? Icons.hourglass_bottom
+                  : Icons.refresh,
               size: 22.sp,
-              color: c.isLoading.value ? const Color(0xFF9E9E9E) : const Color(0xFF212121),
+              color: c.isLoading.value
+                  ? const Color(0xFF9E9E9E)
+                  : const Color(0xFF212121),
             ),
           )),
         ],
@@ -71,13 +65,29 @@ class JobRequestsScreen extends StatelessWidget {
     );
   }
 
-  // ── Scrollable Filter Chips ───────────────────────────────────────
+  // ── Filter Chips ──────────────────────────────────────────────────
   Widget _buildFilterChips(JobRequestsController c) {
     final filters = [
-      {'type': RequestFilterType.active, 'label': 'Active', 'icon': Icons.check_circle_outline},
-      {'type': RequestFilterType.private, 'label': 'Private', 'icon': Icons.lock_outline},
-      {'type': RequestFilterType.emergency, 'label': 'Emergency', 'icon': Icons.warning_amber_rounded},
-      {'type': RequestFilterType.newRequest, 'label': 'New', 'icon': Icons.new_releases},
+      {
+        'type': RequestFilterType.active,
+        'label': 'Active',
+        'icon': Icons.check_circle_outline
+      },
+      {
+        'type': RequestFilterType.private,
+        'label': 'Private',
+        'icon': Icons.lock_outline
+      },
+      {
+        'type': RequestFilterType.emergency,
+        'label': 'Emergency',
+        'icon': Icons.warning_amber_rounded
+      },
+      {
+        'type': RequestFilterType.newRequest,
+        'label': 'New',
+        'icon': Icons.new_releases
+      },
     ];
 
     return SizedBox(
@@ -107,26 +117,24 @@ class JobRequestsScreen extends StatelessWidget {
     );
   }
 
-  // ── Request List with Loading/Empty States ────────────────────────
+  // ── Request List ──────────────────────────────────────────────────
   Widget _buildRequestList(JobRequestsController c) {
     return Obx(() {
-      // Loading state (first load)
       if (c.isLoading.value && c.currentList.isEmpty) {
         return const Center(
           child: CircularProgressIndicator(color: Color(0xFFF8C106)),
         );
       }
 
-      // Empty state
       if (c.currentList.isEmpty) {
         return _buildEmptyState(c.selectedFilter.value);
       }
 
-      // List with pull-to-refresh & pagination
       return NotificationListener<ScrollNotification>(
         onNotification: (scrollInfo) {
           if (!c.isLoading.value &&
-              scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent * 0.8 &&
+              scrollInfo.metrics.pixels >=
+                  scrollInfo.metrics.maxScrollExtent * 0.8 &&
               c.hasMore) {
             c.loadMore(c.selectedFilter.value);
           }
@@ -140,7 +148,6 @@ class JobRequestsScreen extends StatelessWidget {
             itemCount: c.currentList.length + (c.hasMore ? 1 : 0),
             separatorBuilder: (_, __) => SizedBox(height: 12.h),
             itemBuilder: (_, index) {
-              // Pagination loader at end
               if (index == c.currentList.length) {
                 return Padding(
                   padding: EdgeInsets.symmetric(vertical: 16.h),
@@ -161,8 +168,7 @@ class JobRequestsScreen extends StatelessWidget {
               return _RequestCard(
                 request: request,
                 filterType: c.selectedFilter.value,
-                onAccept: () => c.acceptRequest(request.id),
-                onDecline: () => c.declineRequest(request.id),
+                controller: c,
               );
             },
           ),
@@ -171,20 +177,33 @@ class JobRequestsScreen extends StatelessWidget {
     });
   }
 
-  // ── Empty State per Filter ────────────────────────────────────────
+  // ── Empty State ───────────────────────────────────────────────────
   Widget _buildEmptyState(RequestFilterType type) {
     final config = {
-      RequestFilterType.active: {'msg': 'No active requests', 'icon': Icons.work_outline},
-      RequestFilterType.private: {'msg': 'No private requests', 'icon': Icons.lock_outline},
-      RequestFilterType.emergency: {'msg': 'No emergency requests', 'icon': Icons.warning_amber},
-      RequestFilterType.newRequest: {'msg': 'No new requests', 'icon': Icons.new_releases},
+      RequestFilterType.active: {
+        'msg': 'No active requests',
+        'icon': Icons.work_outline
+      },
+      RequestFilterType.private: {
+        'msg': 'No private requests',
+        'icon': Icons.lock_outline
+      },
+      RequestFilterType.emergency: {
+        'msg': 'No emergency requests',
+        'icon': Icons.warning_amber
+      },
+      RequestFilterType.newRequest: {
+        'msg': 'No new requests',
+        'icon': Icons.new_releases
+      },
     }[type]!;
 
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(config['icon'] as IconData, size: 64.sp, color: const Color(0xFFBDBDBD)),
+          Icon(config['icon'] as IconData,
+              size: 64.sp, color: const Color(0xFFBDBDBD)),
           SizedBox(height: 16.h),
           Text(
             config['msg'] as String,
@@ -201,7 +220,7 @@ class JobRequestsScreen extends StatelessWidget {
   }
 }
 
-// ── Reusable Filter Chip Widget ─────────────────────────────────────
+// ── Filter Chip ─────────────────────────────────────────────────────
 class _FilterChip extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -226,7 +245,9 @@ class _FilterChip extends StatelessWidget {
           color: isSelected ? const Color(0xFFF8C106) : Colors.white,
           borderRadius: BorderRadius.circular(24.r),
           border: Border.all(
-            color: isSelected ? const Color(0xFFF8C106) : const Color(0xFFE0E0E0),
+            color: isSelected
+                ? const Color(0xFFF8C106)
+                : const Color(0xFFE0E0E0),
           ),
           boxShadow: isSelected
               ? [
@@ -251,7 +272,8 @@ class _FilterChip extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 13.sp,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight:
+                isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected ? Colors.white : const Color(0xFF212121),
               ),
             ),
@@ -262,22 +284,22 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-// ── Request Card Widget ─────────────────────────────────────────────
+// ── Request Card ────────────────────────────────────────────────────
 class _RequestCard extends StatelessWidget {
   final ServiceRequestModel request;
   final RequestFilterType filterType;
-  final VoidCallback onAccept;
-  final VoidCallback onDecline;
+  final JobRequestsController controller;
 
   const _RequestCard({
     required this.request,
     required this.filterType,
-    required this.onAccept,
-    required this.onDecline,
+    required this.controller,
   });
 
   bool get _isPending => request.status.toUpperCase() == 'PENDING';
-  bool get _isDimmed => request.isSold || ['COMPLETED', 'IN_PROGRESS'].contains(request.status.toUpperCase());
+  bool get _isDimmed =>
+      request.isSold ||
+          ['COMPLETED', 'IN_PROGRESS'].contains(request.status.toUpperCase());
 
   @override
   Widget build(BuildContext context) {
@@ -287,7 +309,8 @@ class _RequestCard extends StatelessWidget {
         color: _isDimmed ? const Color(0xFFF5F5F5) : Colors.white,
         borderRadius: BorderRadius.circular(16.r),
         border: request.markAsPriority && !_isDimmed
-            ? Border.all(color: const Color(0xFFEF5350).withOpacity(0.4), width: 1.5)
+            ? Border.all(
+            color: const Color(0xFFEF5350).withOpacity(0.4), width: 1.5)
             : null,
         boxShadow: [
           BoxShadow(
@@ -314,11 +337,10 @@ class _RequestCard extends StatelessWidget {
     );
   }
 
-  // ── Client Row (Avatar + Name + Chat Button) ──────────────────────
+  // ── Client Row ────────────────────────────────────────────────────
   Widget _buildClientRow() {
     return Row(
       children: [
-        // Avatar
         ClipRRect(
           borderRadius: BorderRadius.circular(22.r),
           child: request.customerPhoto?.isNotEmpty == true
@@ -341,36 +363,26 @@ class _RequestCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 15.sp,
                   fontWeight: FontWeight.w700,
-                  color: _isDimmed ? const Color(0xFF9E9E9E) : const Color(0xFF212121),
+                  color: _isDimmed
+                      ? const Color(0xFF9E9E9E)
+                      : const Color(0xFF212121),
                 ),
               ),
               SizedBox(height: 3.h),
               Row(
                 children: [
-                  Icon(Icons.access_time, size: 12.sp, color: const Color(0xFF9E9E9E)),
+                  Icon(Icons.access_time,
+                      size: 12.sp, color: const Color(0xFF9E9E9E)),
                   SizedBox(width: 4.w),
                   Text(
                     request.formattedDate,
-                    style: TextStyle(fontSize: 12.sp, color: const Color(0xFF9E9E9E)),
+                    style: TextStyle(
+                        fontSize: 12.sp, color: const Color(0xFF9E9E9E)),
                   ),
-                  // ── Chat Button (Phone Hidden Logic) ───────────────
                   if (request.noCallJustChat) ...[
                     SizedBox(width: 8.w),
                     GestureDetector(
-                      onTap: () {
-                        // Create the controller and navigate
-                        Get.to(
-                              () => ProfessionalChatScreen(
-                            controller: ProfessionalChatController(
-                              requestId  : request.id,
-                              clientName : request.customerName,
-                              jobLabel   : 'Job #${request.id}',
-                              clientPhoto: request.customerPhoto ?? '',
-                              myFullName : UserInfo.getFullNameSync() ?? '',
-                            ),
-                          ),
-                        );
-                      },
+                      onTap: () => _openChat(),
                       child: Row(
                         children: [
                           Icon(Icons.chat_bubble_outline,
@@ -389,14 +401,14 @@ class _RequestCard extends StatelessWidget {
             ],
           ),
         ),
-        // Priority Badge + Icon
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             if (request.markAsPriority)
               Container(
                 margin: EdgeInsets.only(bottom: 6.h),
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                padding:
+                EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFEBEE),
                   borderRadius: BorderRadius.circular(20.r),
@@ -433,14 +445,19 @@ class _RequestCard extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          request.customerName.isNotEmpty ? request.customerName[0].toUpperCase() : 'C',
-          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700, color: Colors.white),
+          request.customerName.isNotEmpty
+              ? request.customerName[0].toUpperCase()
+              : 'C',
+          style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w700,
+              color: Colors.white),
         ),
       ),
     );
   }
 
-  // ── Issue Box (Service + Description + Cost) ──────────────────────
+  // ── Issue Box ─────────────────────────────────────────────────────
   Widget _buildIssueBox() {
     return Container(
       width: double.infinity,
@@ -457,7 +474,9 @@ class _RequestCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 14.sp,
               fontWeight: FontWeight.w700,
-              color: _isDimmed ? const Color(0xFF9E9E9E) : const Color(0xFF212121),
+              color: _isDimmed
+                  ? const Color(0xFF9E9E9E)
+                  : const Color(0xFF212121),
             ),
           ),
           if (request.description.isNotEmpty) ...[
@@ -468,7 +487,9 @@ class _RequestCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 12.sp,
-                color: _isDimmed ? const Color(0xFFBDBDBD) : const Color(0xFF757575),
+                color: _isDimmed
+                    ? const Color(0xFFBDBDBD)
+                    : const Color(0xFF757575),
                 height: 1.4,
               ),
             ),
@@ -490,7 +511,9 @@ class _RequestCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w700,
-                    color: _isDimmed ? const Color(0xFFBDBDBD) : const Color(0xFFF8C106),
+                    color: _isDimmed
+                        ? const Color(0xFFBDBDBD)
+                        : const Color(0xFFF8C106),
                   ),
                 ),
               ],
@@ -505,7 +528,8 @@ class _RequestCard extends StatelessWidget {
   Widget _buildAddressRow() {
     return Row(
       children: [
-        Icon(Icons.location_on_outlined, size: 14.sp, color: const Color(0xFF9E9E9E)),
+        Icon(Icons.location_on_outlined,
+            size: 14.sp, color: const Color(0xFF9E9E9E)),
         SizedBox(width: 4.w),
         Expanded(
           child: Text(
@@ -518,115 +542,180 @@ class _RequestCard extends StatelessWidget {
     );
   }
 
-  // ── Bottom Row (Zip + Action Buttons) ─────────────────────────────
+  // ── Bottom Row ────────────────────────────────────────────────────
   Widget _buildBottomRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Zip Code + Applicants
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Zip Code', style: TextStyle(fontSize: 11.sp, color: const Color(0xFF9E9E9E))),
+            Text('Zip Code',
+                style:
+                TextStyle(fontSize: 11.sp, color: const Color(0xFF9E9E9E))),
             SizedBox(height: 3.h),
             Text(
               request.zipCode,
               style: TextStyle(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w800,
-                color: _isDimmed ? const Color(0xFF9E9E9E) : const Color(0xFFF8C106),
+                color: _isDimmed
+                    ? const Color(0xFF9E9E9E)
+                    : const Color(0xFFF8C106),
               ),
             ),
             if (request.applicationCount > 0) ...[
               SizedBox(height: 3.h),
               Text(
                 '${request.applicationCount} applied',
-                style: TextStyle(fontSize: 11.sp, color: const Color(0xFF9E9E9E)),
+                style: TextStyle(
+                    fontSize: 11.sp, color: const Color(0xFF9E9E9E)),
               ),
             ],
           ],
         ),
-        // Action Buttons based on status & filter
-        _buildActionButtons(),
+        Flexible(child: _buildActionButtons()),
       ],
     );
   }
 
+  // ── Action Buttons ────────────────────────────────────────────────
   Widget _buildActionButtons() {
-    // Sold overlay handled in Stack parent if needed
     if (request.isSold) {
       return _badge(label: 'Sold', color: const Color(0xFF757575));
     }
 
     final status = request.status.toUpperCase();
 
-    // Completed / In Progress - Show status badge
-    if (['COMPLETED'].contains(status)) {
-      return _buildStatusBadge(label: 'Completed', color: const Color(0xFF43A047));
+    if (status == 'COMPLETED') {
+      return _buildStatusBadge(
+          label: 'Completed', color: const Color(0xFF43A047));
     }
     if (['IN_PROGRESS', 'ACCEPTED', 'ON_THE_WAY'].contains(status)) {
-      return _buildStatusBadge(label: request.statusDisplay, color: const Color(0xFF1565C0));
+      return _buildStatusBadge(
+          label: request.statusDisplay, color: const Color(0xFF1565C0));
     }
 
-    // Pending - Show Accept/Decline (only for New/Private/Emergency filters)
-    if (_isPending && filterType != RequestFilterType.active) {
-      return Row(
-        children: [
-          GestureDetector(
-            onTap: onDecline,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(color: const Color(0xFFE53935), width: 1.5),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.close, color: const Color(0xFFE53935), size: 14.sp),
-                  SizedBox(width: 4.w),
-                  Text('Decline', style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600, color: const Color(0xFFE53935))),
-                ],
-              ),
-            ),
+    // Active filter → View Details
+    if (filterType == RequestFilterType.active) {
+      return GestureDetector(
+        onTap: () => controller.viewActiveJob(request.id),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8C106),
+            borderRadius: BorderRadius.circular(8.r),
           ),
-          SizedBox(width: 8.w),
-          GestureDetector(
-            onTap: onAccept,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-              decoration: BoxDecoration(
-                color: const Color(0xFF43A047),
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.check, color: Colors.white, size: 14.sp),
-                  SizedBox(width: 4.w),
-                  Text('Accept', style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600, color: Colors.white)),
-                ],
-              ),
-            ),
+          child: Text(
+            'View Details',
+            style: TextStyle(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w700,
+                color: Colors.white),
           ),
-        ],
+        ),
       );
     }
 
-    // Active filter - Show "View Details" or status
-    return GestureDetector(
-      onTap: () => onAccept(), // Navigate to ActiveJobScreen
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8C106),
-          borderRadius: BorderRadius.circular(8.r),
+    // ── PRIVATE filter → Accept + Decline ──
+    if (filterType == RequestFilterType.private) {
+      return Obx(() {
+        final busy = controller.respondingId.value == request.id;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Decline
+            GestureDetector(
+              onTap: busy ? null : () => controller.declineRequest(request.id),
+              child: Container(
+                padding:
+                EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(
+                      color: const Color(0xFFE53935), width: 1.5),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.close,
+                        color: const Color(0xFFE53935), size: 14.sp),
+                    SizedBox(width: 4.w),
+                    Text('Decline',
+                        style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFE53935))),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(width: 8.w),
+            // Accept
+            GestureDetector(
+              onTap:
+              busy ? null : () => controller.respondToRequest(request.id),
+              child: Container(
+                padding:
+                EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF43A047),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: busy
+                    ? SizedBox(
+                  width: 16.w,
+                  height: 16.w,
+                  child: const CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white),
+                )
+                    : Row(
+                  children: [
+                    Icon(Icons.check,
+                        color: Colors.white, size: 14.sp),
+                    SizedBox(width: 4.w),
+                    Text('Accept',
+                        style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      });
+    }
+
+    // ── NEW / EMERGENCY filter → Apply only ──
+    return Obx(() {
+      final busy = controller.respondingId.value == request.id;
+      return GestureDetector(
+        onTap: busy ? null : () => controller.respondToRequest(request.id),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+          decoration: BoxDecoration(
+            color: const Color(0xFF43A047),
+            borderRadius: BorderRadius.circular(8.r),
+          ),
+          child: busy
+              ? SizedBox(
+            width: 16.w,
+            height: 16.w,
+            child: const CircularProgressIndicator(
+                strokeWidth: 2, color: Colors.white),
+          )
+              : Text(
+            'Apply',
+            style: TextStyle(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w700,
+                color: Colors.white),
+          ),
         ),
-        child: Text(
-          'View Details',
-          style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w700, color: Colors.white),
-        ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _badge({required String label, required Color color}) {
@@ -638,7 +727,8 @@ class _RequestCard extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600, color: color),
+        style: TextStyle(
+            fontSize: 12.sp, fontWeight: FontWeight.w600, color: color),
       ),
     );
   }
@@ -651,21 +741,35 @@ class _RequestCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(8.r),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.check, color: color, size: 14.sp),
           SizedBox(width: 4.w),
-          Text(label, style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600, color: color)),
+          Flexible(
+            child: Text(label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                    color: color)),
+          ),
         ],
       ),
     );
   }
 
-  // ── Open Chat (Phone Hidden Logic) ────────────────────────────────
-  void _openChat(BuildContext context) {
+  // ── Open Chat ─────────────────────────────────────────────────────
+  void _openChat() {
     if (request.id <= 0) {
-      Get.snackbar('Error', 'Request ID not available', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('Error', 'Request ID not available',
+          snackPosition: SnackPosition.BOTTOM);
       return;
     }
+
+    if (Get.isRegistered<ProfessionalChatController>()) {
+      Get.delete<ProfessionalChatController>(force: true);
+    }
+
     Get.to(
           () => ProfessionalChatScreen(
         controller: ProfessionalChatController(
