@@ -75,4 +75,9 @@ class ApiEndpoint {
   // ── Provider Details & Invite ─────────────────────────────────────
   static String providerDetails(int id) => '/services/providers/$id/';
   static String inviteProvider(int id)  => '/services/providers/$id/invite/';
+
+  //Google
+
+  static const String googleLogin = '/auth/google/';
+
 }

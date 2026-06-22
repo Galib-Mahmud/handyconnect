@@ -16,6 +16,10 @@ dependencies:
   web_socket_channel:
   geolocator:
   dio:
+  firebase_core:
+  firebase_auth:
+  google_sign_in: 6.2.1
+  cloud_firestore:
 
 dev_dependencies:
   flutter_test:
