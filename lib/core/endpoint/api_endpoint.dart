@@ -1,7 +1,7 @@
 // lib/core/endpoint/api_endpoint.dart
 
 class ApiEndpoint {
-  static const String baseUrl = 'https://handyapi.dsrt321.online/api';
+  static const String baseUrl = 'https://api.vonabisz.de/api';
 
   // ─── Auth ──────────────────────────────────────────────────────────
   static const String register       = "/auth/register/";
@@ -23,10 +23,6 @@ class ApiEndpoint {
   static const String initializeRequest  = '/services/requests/initialize/';
   static const String createRequest      = '/services/requests/';
   static const String uploadMedia        = '/services/media/upload/';
-
-
-
-
 
 
 
@@ -79,5 +75,6 @@ class ApiEndpoint {
   //Google
 
   static const String googleLogin = '/auth/google/';
+
 
 }
