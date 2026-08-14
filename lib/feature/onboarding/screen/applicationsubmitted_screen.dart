@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:handyConnect/feature/onboarding/screen/onboarding_screen.dart';
+
+import 'onboarding_screen.dart';
+
 
 class Screen4ApplicationSubmitted extends StatelessWidget {
   final VoidCallback onHome;

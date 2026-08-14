@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:handyConnect/route/route_name.dart';
 
+import '../../../route/route_name.dart';
 import '../controller/customer_in_progress_controller.dart';
 
 class CustomerInProgressScreen extends StatelessWidget {

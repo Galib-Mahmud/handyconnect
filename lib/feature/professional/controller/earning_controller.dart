@@ -1,8 +1,10 @@
 // lib/features/professional/earnings/controller/earnings_controller.dart
 
 import 'package:get/get.dart';
-import 'package:handyConnect/core/endpoint/api_client.dart';
-import 'package:handyConnect/core/endpoint/api_endpoint.dart';
+
+import '../../../core/endpoint/api_client.dart';
+import '../../../core/endpoint/api_endpoint.dart';
+
 
 class TransactionModel {
   final String jobId;

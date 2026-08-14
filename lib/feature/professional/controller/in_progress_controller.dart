@@ -1,8 +1,9 @@
 // lib/feature/professional/in_progress/controller/customer_in_progress_controller.dart
 
 import 'package:get/get.dart';
-import 'package:handyConnect/core/local_storage/user_info.dart';
-import 'package:handyConnect/route/route_name.dart';
+
+import '../../../core/local_storage/user_info.dart';
+import '../../../route/route_name.dart';
 
 enum TimelineStatus { completed, active, pending }
 

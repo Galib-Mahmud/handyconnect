@@ -3,7 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:handyConnect/feature/professional/controller/earning_controller.dart';
+
+import '../controller/earning_controller.dart';
 
 class EarningsScreen extends StatelessWidget {
   const EarningsScreen({super.key});

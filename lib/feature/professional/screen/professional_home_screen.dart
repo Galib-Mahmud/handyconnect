@@ -3,15 +3,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:handyConnect/core/local_storage/user_info.dart';
-import 'package:handyConnect/feature/chat/controller/chat_controller.dart';
-import 'package:handyConnect/feature/chat/screen/chat_screen.dart';
-import 'package:handyConnect/feature/customer/screen/notification_screen.dart';
-import 'package:handyConnect/feature/extra/controller/report_issue_controller.dart';
-import 'package:handyConnect/feature/professional/controller/professional_home_controller.dart';
-import 'package:handyConnect/feature/professional/screen/active_job_screen.dart';
 
+
+import '../../../core/local_storage/user_info.dart';
+import '../../chat/controller/chat_controller.dart';
+import '../../chat/screen/chat_screen.dart';
+import '../../customer/screen/notification_screen.dart';
+import '../controller/professional_home_controller.dart';
 import '../main_screen_1.dart';
+import 'active_job_screen.dart';
 
 class ProfessionalHomeScreen extends StatelessWidget {
   const ProfessionalHomeScreen({super.key});

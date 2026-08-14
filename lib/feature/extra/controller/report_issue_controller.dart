@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:handyConnect/feature/extra/controller/report_issue_controller.dart';
-import 'package:handyConnect/feature/extra/screen/report_issue.dart';
 
 class ReportIssueController extends GetxController {
   final additionalDetailsController = TextEditingController();

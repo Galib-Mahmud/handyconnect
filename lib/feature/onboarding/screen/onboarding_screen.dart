@@ -1,12 +1,14 @@
+import 'package:VonAbisZ/feature/onboarding/screen/setupservices.dart';
+import 'package:VonAbisZ/feature/onboarding/screen/verify_identity_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:handyConnect/feature/onboarding/controller/onboarding_controller.dart';
-import 'package:handyConnect/feature/onboarding/screen/account_created_onboarding_screen.dart';
-import 'package:handyConnect/feature/onboarding/screen/applicationsubmitted_screen.dart';
-import 'package:handyConnect/feature/onboarding/screen/setupservices.dart';
-import 'package:handyConnect/feature/onboarding/screen/verify_identity_screen.dart';
-import 'package:handyConnect/route/route_name.dart';
+
+import '../../../route/route_name.dart';
+import '../controller/onboarding_controller.dart';
+import 'account_created_onboarding_screen.dart';
+import 'applicationsubmitted_screen.dart';
+
 
 
 

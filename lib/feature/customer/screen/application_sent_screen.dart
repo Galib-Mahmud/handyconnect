@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:handyConnect/route/route_name.dart';
+
+import '../../../route/route_name.dart';
 
 class ApplicationSentScreen extends StatelessWidget {
   const ApplicationSentScreen({super.key});

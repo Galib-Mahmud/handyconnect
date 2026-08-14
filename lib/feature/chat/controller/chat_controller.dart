@@ -5,11 +5,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:handyConnect/core/endpoint/api_client.dart';
-import 'package:handyConnect/core/endpoint/api_endpoint.dart';
-import 'package:handyConnect/core/local_storage/user_info.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as ws_status;
+
+import '../../../core/endpoint/api_client.dart';
+import '../../../core/endpoint/api_endpoint.dart';
+import '../../../core/local_storage/user_info.dart';
 
 // ── Model ──────────────────────────────────────────────────────────
 class ChatMessage {

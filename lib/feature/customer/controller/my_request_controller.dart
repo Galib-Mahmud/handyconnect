@@ -1,8 +1,8 @@
 // lib/features/customer/controller/my_request_controller.dart
 
 import 'package:get/get.dart';
-import 'package:handyConnect/core/endpoint/api_client.dart';
-import 'package:handyConnect/core/endpoint/api_endpoint.dart';
+import '../../../core/endpoint/api_client.dart';
+import '../../../core/endpoint/api_endpoint.dart';
 
 class MyRequestController extends GetxController {
   final ApiClient _apiClient = ApiClient(baseUrl: ApiEndpoint.baseUrl);

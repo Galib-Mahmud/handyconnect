@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import 'package:dio/dio.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:handyConnect/core/endpoint/api_client.dart';
-import 'package:handyConnect/core/endpoint/api_endpoint.dart';
-import 'package:handyConnect/core/local_storage/user_info.dart';
-import 'package:handyConnect/route/route_name.dart';
+
 import 'package:image_picker/image_picker.dart';
+
+import '../../../core/endpoint/api_client.dart';
+import '../../../core/endpoint/api_endpoint.dart';
+import '../../../core/local_storage/user_info.dart';
+import '../../../route/route_name.dart';
 
 class OnboardingController extends GetxController {
   static OnboardingController get to =>

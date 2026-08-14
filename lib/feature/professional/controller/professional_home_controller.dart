@@ -3,9 +3,10 @@
 import 'dart:io';
 
 import 'package:get/get.dart';
-import 'package:handyConnect/core/endpoint/api_client.dart';
-import 'package:handyConnect/core/endpoint/api_endpoint.dart';
 
+
+import '../../../core/endpoint/api_client.dart';
+import '../../../core/endpoint/api_endpoint.dart';
 import '../../../core/local_storage/user_info.dart';
 
 

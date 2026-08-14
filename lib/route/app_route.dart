@@ -1,15 +1,8 @@
 
+import 'package:VonAbisZ/route/route_name.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';
-import 'package:handyConnect/feature/onboarding/screen/onboarding_screen.dart';
-import 'package:handyConnect/feature/professional/main_screen_1.dart';
-import 'package:handyConnect/feature/professional/screen/active_job_screen.dart';
-import 'package:handyConnect/feature/professional/screen/earning_screen.dart';
-import 'package:handyConnect/feature/professional/screen/job_request_screen.dart';
-import 'package:handyConnect/feature/professional/screen/professional_home_screen.dart';
-import 'package:handyConnect/feature/professional/screen/professional_profile_screen.dart';
-import 'package:handyConnect/feature/professional/screen/subscription_screen.dart';
-import 'package:handyConnect/route/route_name.dart';
+
 import '../feature/auth/screen/forgot_password_screen.dart';
 import '../feature/auth/screen/otp_verification_screen.dart';
 import '../feature/auth/screen/pass_reset_screen.dart';
@@ -30,6 +23,14 @@ import '../feature/customer/screen/profile_screen.dart';
 import '../feature/customer/screen/recent_request_screen.dart';
 import '../feature/customer/screen/save_address_screen.dart';
 import '../feature/customer/screen/service_provider_screen.dart';
+import '../feature/onboarding/screen/onboarding_screen.dart';
+import '../feature/professional/main_screen_1.dart';
+import '../feature/professional/screen/active_job_screen.dart';
+import '../feature/professional/screen/earning_screen.dart';
+import '../feature/professional/screen/job_request_screen.dart';
+import '../feature/professional/screen/professional_home_screen.dart';
+import '../feature/professional/screen/professional_profile_screen.dart';
+import '../feature/professional/screen/subscription_screen.dart';
 import '../feature/splash/screen/splash_screen.dart';
 
 

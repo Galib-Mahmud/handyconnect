@@ -1,10 +1,11 @@
 
+import 'package:VonAbisZ/feature/professional/screen/earning_screen.dart';
+import 'package:VonAbisZ/feature/professional/screen/job_request_screen.dart';
+import 'package:VonAbisZ/feature/professional/screen/professional_home_screen.dart';
+import 'package:VonAbisZ/feature/professional/screen/professional_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:handyConnect/feature/professional/screen/earning_screen.dart';
-import 'package:handyConnect/feature/professional/screen/job_request_screen.dart';
-import 'package:handyConnect/feature/professional/screen/professional_home_screen.dart';
-import 'package:handyConnect/feature/professional/screen/professional_profile_screen.dart';
+
 
 
 

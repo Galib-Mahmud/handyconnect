@@ -3,10 +3,10 @@
 import 'dart:io';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:handyConnect/core/endpoint/api_client.dart';
-import 'package:handyConnect/core/endpoint/api_endpoint.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/endpoint/api_client.dart';
+import '../../../core/endpoint/api_endpoint.dart';
 import '../../../route/route_name.dart';
 
 class RequestController extends GetxController {

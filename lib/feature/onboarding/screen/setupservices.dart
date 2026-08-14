@@ -3,8 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:handyConnect/feature/onboarding/controller/onboarding_controller.dart';
-import 'package:handyConnect/feature/onboarding/screen/onboarding_screen.dart';
+
+import '../controller/onboarding_controller.dart';
+import 'onboarding_screen.dart';
 
 class Screen3SetupServices extends StatelessWidget {
   final VoidCallback onNext;

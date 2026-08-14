@@ -1,10 +1,12 @@
 // lib/features/professional/job_requests/controller/job_requests_controller.dart
 
 import 'package:get/get.dart';
-import 'package:handyConnect/core/endpoint/api_client.dart';
-import 'package:handyConnect/core/endpoint/api_endpoint.dart';
-import 'package:handyConnect/feature/professional/screen/active_job_screen.dart';
-import 'package:handyConnect/feature/professional/controller/active_job_controller.dart';
+
+import '../../../core/endpoint/api_client.dart';
+import '../../../core/endpoint/api_endpoint.dart';
+import '../screen/active_job_screen.dart';
+import 'active_job_controller.dart';
+
 
 // ── Enum for Filter Types ──────────────────────────────────────────
 enum RequestFilterType {

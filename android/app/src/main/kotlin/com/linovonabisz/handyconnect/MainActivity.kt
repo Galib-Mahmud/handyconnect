@@ -1,4 +1,4 @@
-package com.example.handyconnect
+package com.linovonabisz.handyconnect
 
 import io.flutter.embedding.android.FlutterActivity
 
