@@ -66,7 +66,7 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           initialRoute: _determineInitialRoute,
-          getPages: AppRoute.pages,
+          getPages:  AppRoute.pages,
           defaultTransition: Transition.cupertino,
 
           // ✅ full: controller বন্ধ হলে memory থেকে সরিয়ে দেয়

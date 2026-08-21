@@ -7,6 +7,7 @@ import '../../../core/endpoint/api_endpoint.dart';
 import '../../../core/local_storage/user_info.dart';
 import '../../chat/controller/chat_controller.dart';
 import '../../chat/screen/chat_screen.dart';
+import 'location_tracking_controller.dart'; // adjust path if needed
 
 // ── Timeline enums / model ──────────────────────────────────────────
 enum TimelineStatus { completed, active, pending }
@@ -25,7 +26,7 @@ class TimelineStep {
   });
 }
 
-// ── API status order ────────────────────────────────────────────────
+// ── API status order ──────────────────────────────────────────────
 const _statusOrder = {
   'PENDING'    : 0,
   'ACCEPTED'   : 1,
@@ -35,11 +36,11 @@ const _statusOrder = {
   'REVIEWED'   : 5,
 };
 
-// ── Controller ──────────────────────────────────────────────────────
+// ── Controller ─────────────────────────────────────────────────────
 class InProgressController extends GetxController {
   final ApiClient _api = ApiClient(baseUrl: ApiEndpoint.baseUrl);
 
-  // ── Observable state ──────────────────────────────────────────────
+  // ── Observable state ────────────────────────────────────────────
   final technicianName   = ''.obs;
   final technicianImage  = ''.obs;
   final technicianRating = 0.0.obs;
@@ -50,13 +51,13 @@ class InProgressController extends GetxController {
   final isLoading = true.obs;
   final errorMsg  = ''.obs;
 
-  // ── Interested providers (shown when PENDING) ─────────────────────
+  // ── Interested providers (shown when PENDING) ──────────────────
   final RxList<Map<String, dynamic>> interestedProviders =
       <Map<String, dynamic>>[].obs;
   final RxBool isLoadingProviders = false.obs;
   final RxBool isHiring           = false.obs;
 
-  // ── Review state ──────────────────────────────────────────────────
+  // ── Review state ─────────────────────────────────────────────────
   final RxInt    reviewRating       = 0.obs;
   final RxString reviewComment      = ''.obs;
   final RxBool   isSubmittingReview = false.obs;
@@ -78,10 +79,15 @@ class InProgressController extends GetxController {
   @override
   void onClose() {
     _pollTimer?.cancel();
+    // Clean up the tracking controller tied to this request, if it was created.
+    final tag = 'tracking_$requestId';
+    if (Get.isRegistered<LocationTrackingController>(tag: tag)) {
+      Get.delete<LocationTrackingController>(tag: tag);
+    }
     super.onClose();
   }
 
-  // ── Fetch request status ──────────────────────────────────────────
+  // ── Fetch request status ────────────────────────────────────────
   Future<void> fetchStatus() async {
     if (requestId == 0) {
       errorMsg.value = 'No active request found.';
@@ -112,6 +118,15 @@ class InProgressController extends GetxController {
 
       steps.assignAll(_buildSteps(apiStatus, tl));
 
+      // Keep the tracking controller's status in sync so it starts/stops
+      // WebSocket tracking the instant this poller sees a status change,
+      // instead of waiting on its own timers.
+      final tag = 'tracking_$requestId';
+      if (Get.isRegistered<LocationTrackingController>(tag: tag)) {
+        Get.find<LocationTrackingController>(tag: tag)
+            .onStatusChanged(apiStatus);
+      }
+
       print('✅ [IN-PROGRESS] status=$apiStatus  provider=${technicianName.value}');
 
       // Stop polling once reviewed (terminal state)
@@ -136,7 +151,7 @@ class InProgressController extends GetxController {
     }
   }
 
-  // ── Fetch interested providers ────────────────────────────────────
+  // ── Fetch interested providers ──────────────────────────────────
   Future<void> _fetchInterestedProviders() async {
     if (requestId == 0) return;
     try {
@@ -166,7 +181,7 @@ class InProgressController extends GetxController {
     }
   }
 
-  // ── Hire a provider ───────────────────────────────────────────────
+  // ── Hire a provider ─────────────────────────────────────────────
   Future<void> hireProvider(int providerId, String providerName) async {
     if (isHiring.value) return;
     if (requestId == 0) {
@@ -204,7 +219,7 @@ class InProgressController extends GetxController {
     }
   }
 
-  // ── Submit Review ─────────────────────────────────────────────────
+  // ── Submit Review ────────────────────────────────────────────────
   // POST /services/requests/{id}/submit-review/
   void setRating(int stars) => reviewRating.value = stars;
 
@@ -265,7 +280,7 @@ class InProgressController extends GetxController {
     }
   }
 
-  // ── Build timeline steps ──────────────────────────────────────────
+  // ── Build timeline steps ────────────────────────────────────────
   List<TimelineStep> _buildSteps(
       String apiStatus, Map<String, dynamic> tl) {
     final currentOrder = _statusOrder[apiStatus] ?? 0;

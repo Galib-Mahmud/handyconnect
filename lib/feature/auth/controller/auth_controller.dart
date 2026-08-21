@@ -479,44 +479,7 @@ class AuthController extends GetxController {
   // ─────────────────────────────────────────────────────────────────
   void goToForgotPassword() => Get.toNamed(RouteName.forgetPass);
   void goToSignUp() => Get.toNamed(RouteName.signup);
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    serverClientId: '274632425873-c9v234cl9dk6au17ier0n7hk99gqol7s.apps.googleusercontent.com',
-    scopes: ['email', 'profile', 'openid'],
-  );
 
-  Future<void> continueWithGoogle() async {
-    isLoading.value = true;
-    try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        isLoading.value = false;
-        return; // user cancel করেছে
-      }
-
-      final auth = await googleUser.authentication;
-      final accessToken = auth.accessToken;
-      if (accessToken == null) {
-        _showError('Google token পাওয়া যায়নি। আবার চেষ্টা করো।');
-        return;
-      }
-
-      final response = await _apiClient.post(
-        ApiEndpoint.googleLogin,
-        body: {'access_token': accessToken},
-        requiresAuth: false,
-      );
-
-      _handleSocialResponse(response);
-    } on HttpException catch (e) {
-      _showError(_extractMessage(_tryParseBody(e.body)) ?? e.message);
-    } catch (e) {
-      print('❌ Google error: $e');
-      _showError('Google sign-in fail হয়েছে।');
-      await _googleSignIn.signOut();
-    } finally {
-      isLoading.value = false;
-    }
-  }
   void continueWithApple() => _showInfo('Apple sign-in coming soon');
 
   // ─────────────────────────────────────────────────────────────────

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../route/route_name.dart';
 import '../controller/customer_in_progress_controller.dart';
+import '../controller/location_tracking_controller.dart'; // adjust path if needed
 
 class CustomerInProgressScreen extends StatelessWidget {
   const CustomerInProgressScreen({super.key});
@@ -11,6 +13,10 @@ class CustomerInProgressScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(InProgressController());
+    final trackingController = Get.put(
+      LocationTrackingController(requestId: controller.requestId),
+      tag: 'tracking_${controller.requestId}',
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -65,7 +71,7 @@ class CustomerInProgressScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildMapView(),
+                      _buildMapView(trackingController),
                       SizedBox(height: 16.h),
                       _buildTechnicianCard(controller),
                       SizedBox(height: 16.h),
@@ -82,7 +88,6 @@ class CustomerInProgressScreen extends StatelessWidget {
                         return _buildInterestedSection(controller);
                       }),
 
-
                       SizedBox(height: 8.h),
                       _buildTimeline(controller),
                       SizedBox(height: 24.h),
@@ -90,7 +95,6 @@ class CustomerInProgressScreen extends StatelessWidget {
                       // ── Review (always shown) ──────────────────
                       _buildReviewCard(controller),
                       SizedBox(height: 24.h),
-
                     ],
                   ),
                 ),
@@ -128,36 +132,84 @@ class CustomerInProgressScreen extends StatelessWidget {
     );
   }
 
-  // ─────────────────────── Map View ────────────────────────────────
-  Widget _buildMapView() {
+  // ─────────────────────── Map View ─────────────────────────────────
+  Widget _buildMapView(LocationTrackingController tracking) {
     return Container(
       height: 180.h,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: const Color(0xFFE8EAF0),
         borderRadius: BorderRadius.circular(16.r),
       ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          CustomPaint(
-            size: Size(double.infinity, 180.h),
-            painter: _MapGridPainter(),
-          ),
-          _PulsingDot(),
-          Text(
-            'Map View (On The Way)',
-            style: TextStyle(
-              fontSize: 14.sp,
-              color: const Color(0xFF9E9E9E),
-              fontWeight: FontWeight.w400,
+      child: Obx(() {
+        final jobLat = tracking.jobLat.value;
+        final jobLng = tracking.jobLng.value;
+
+        if (jobLat == null || jobLng == null) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFFF8C106)),
+          );
+        }
+
+        final jobLatLng = LatLng(jobLat, jobLng);
+        final markers = <Marker>{
+          Marker(
+            markerId: const MarkerId('job'),
+            position: jobLatLng,
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueRed,
+            ),
+            infoWindow: InfoWindow(
+              title: tracking.jobAddress.value.isEmpty
+                  ? 'Job location'
+                  : tracking.jobAddress.value,
             ),
           ),
-        ],
-      ),
+        };
+
+        if (tracking.hasProviderFix) {
+          markers.add(
+            Marker(
+              markerId: const MarkerId('provider'),
+              position: LatLng(
+                tracking.providerLat.value!,
+                tracking.providerLng.value!,
+              ),
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueAzure,
+              ),
+              infoWindow: InfoWindow(
+                title: tracking.isProviderStale
+                    ? 'Provider (may be outdated)'
+                    : 'Provider',
+              ),
+            ),
+          );
+        }
+
+        return Stack(
+          children: [
+            GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: jobLatLng,
+                zoom: 14,
+              ),
+              markers: markers,
+              zoomControlsEnabled: false,
+              myLocationButtonEnabled: false,
+            ),
+            Positioned(
+              top: 8,
+              left: 8,
+              child: _MapStatusChip(tracking: tracking),
+            ),
+          ],
+        );
+      }),
     );
   }
 
-  // ─────────────────────── Technician Card ─────────────────────────
+  // ─────────────────────── Technician Card ───────────────────────────
   Widget _buildTechnicianCard(InProgressController controller) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
@@ -218,7 +270,7 @@ class CustomerInProgressScreen extends StatelessWidget {
     );
   }
 
-  // ─────────────────────── Interested Providers ────────────────────
+  // ─────────────────────── Interested Providers ──────────────────────
   Widget _buildInterestedSection(InProgressController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -444,7 +496,7 @@ class CustomerInProgressScreen extends StatelessWidget {
     );
   }
 
-  // ── Hire confirmation dialog ──────────────────────────────────────
+  // ── Hire confirmation dialog ────────────────────────────────────
   void _confirmHire(
       InProgressController controller, int providerId, String name) {
     Get.dialog(
@@ -496,7 +548,7 @@ class CustomerInProgressScreen extends StatelessWidget {
     );
   }
 
-  // ─────────────────────── Review Card ─────────────────────────────
+  // ─────────────────────── Review Card ───────────────────────────────
   Widget _buildReviewCard(InProgressController controller) {
     return Obx(() {
       // Already reviewed → thank-you state
@@ -723,7 +775,7 @@ class CustomerInProgressScreen extends StatelessWidget {
     });
   }
 
-  // ─────────────────────── Timeline ────────────────────────────────
+  // ─────────────────────── Timeline ──────────────────────────────────
   Widget _buildTimeline(InProgressController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -849,7 +901,7 @@ class CustomerInProgressScreen extends StatelessWidget {
     );
   }
 
-  // ─────────────────────── Bottom Buttons ──────────────────────────
+  // ─────────────────────── Bottom Buttons ────────────────────────────
   Widget _buildBottomButtons(InProgressController controller) {
     return Padding(
       padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 24.h),
@@ -911,86 +963,57 @@ class CustomerInProgressScreen extends StatelessWidget {
   }
 }
 
-// ─────────────────── Map grid painter ────────────────────────────
-class _MapGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFCDD0DA)
-      ..strokeWidth = 0.5;
-    const step = 30.0;
-    for (double x = 0; x < size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    for (double y = 0; y < size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-  }
+// ─────────────────── Map status chip ────────────────────────────────
+class _MapStatusChip extends StatelessWidget {
+  const _MapStatusChip({required this.tracking});
 
-  @override
-  bool shouldRepaint(_MapGridPainter old) => false;
-}
-
-// ─────────────────── Pulsing animated dot ────────────────────────
-class _PulsingDot extends StatefulWidget {
-  @override
-  State<_PulsingDot> createState() => _PulsingDotState();
-}
-
-class _PulsingDotState extends State<_PulsingDot>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _scale;
-  late Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(seconds: 1))
-      ..repeat();
-    _scale = Tween<double>(begin: 1.0, end: 2.2)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
-    _opacity = Tween<double>(begin: 0.5, end: 0.0).animate(_ctrl);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
+  final LocationTrackingController tracking;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 50,
-      height: 50,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          AnimatedBuilder(
-            animation: _ctrl,
-            builder: (_, __) => Transform.scale(
-              scale: _scale.value,
-              child: Opacity(
-                opacity: _opacity.value,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                      color: Color(0xFFFFA726), shape: BoxShape.circle),
-                ),
-              ),
-            ),
+    return Obx(() {
+      String text;
+      Color color;
+
+      switch (tracking.connectionState.value) {
+        case TrackingConnectionState.live:
+          text = tracking.hasProviderFix
+              ? (tracking.isProviderStale ? 'May be outdated' : 'Live')
+              : 'Waiting for location…';
+          color = tracking.isProviderStale
+              ? const Color(0xFFFFA726)
+              : const Color(0xFF43A047);
+          break;
+        case TrackingConnectionState.connecting:
+        case TrackingConnectionState.fallbackPolling:
+          text = 'Connecting…';
+          color = const Color(0xFFFFA726);
+          break;
+        case TrackingConnectionState.stopped:
+          text = 'Tracking ended';
+          color = const Color(0xFF9E9E9E);
+          break;
+        case TrackingConnectionState.error:
+          text = 'Unavailable';
+          color = const Color(0xFFE53935);
+          break;
+      }
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
           ),
-          Container(
-            width: 14,
-            height: 14,
-            decoration: const BoxDecoration(
-                color: Color(0xFFFFA726), shape: BoxShape.circle),
-          ),
-        ],
-      ),
-    );
+        ),
+      );
+    });
   }
 }
