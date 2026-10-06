@@ -40,7 +40,7 @@ class JobRequestsScreen extends StatelessWidget {
         children: [
           SizedBox(width: 14.w),
           Text(
-            'Job Requests',
+            'job_requests'.tr,
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w800,
@@ -70,22 +70,22 @@ class JobRequestsScreen extends StatelessWidget {
     final filters = [
       {
         'type': RequestFilterType.active,
-        'label': 'Active',
+        'label': 'filter_active'.tr,
         'icon': Icons.check_circle_outline
       },
       {
         'type': RequestFilterType.private,
-        'label': 'Private',
+        'label': 'filter_private'.tr,
         'icon': Icons.lock_outline
       },
       {
         'type': RequestFilterType.emergency,
-        'label': 'Emergency',
+        'label': 'filter_emergency'.tr,
         'icon': Icons.warning_amber_rounded
       },
       {
         'type': RequestFilterType.newRequest,
-        'label': 'New',
+        'label': 'filter_new'.tr,
         'icon': Icons.new_releases
       },
     ];
@@ -607,7 +607,7 @@ class _RequestCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(8.r),
           ),
           child: Text(
-            'View Details',
+            'view_job'.tr,
             style: TextStyle(
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w700,
@@ -641,7 +641,7 @@ class _RequestCard extends StatelessWidget {
                     Icon(Icons.close,
                         color: const Color(0xFFE53935), size: 14.sp),
                     SizedBox(width: 4.w),
-                    Text('Decline',
+                    Text('decline_job'.tr,
                         style: TextStyle(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
@@ -674,7 +674,7 @@ class _RequestCard extends StatelessWidget {
                     Icon(Icons.check,
                         color: Colors.white, size: 14.sp),
                     SizedBox(width: 4.w),
-                    Text('Accept',
+                    Text('accept_job'.tr,
                         style: TextStyle(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
@@ -707,7 +707,7 @@ class _RequestCard extends StatelessWidget {
                 strokeWidth: 2, color: Colors.white),
           )
               : Text(
-            'Apply',
+            'apply_now'.tr,
             style: TextStyle(
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w700,

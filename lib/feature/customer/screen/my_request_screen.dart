@@ -91,7 +91,7 @@ class _MyRequestState extends State<MyRequest> {
           ),
           SizedBox(width: 16.w),
           Text(
-            'My Request',
+            'nav_request'.tr,
             style: TextStyle(
               fontSize: 20.sp,
               fontWeight: FontWeight.w700,
@@ -110,22 +110,22 @@ class _MyRequestState extends State<MyRequest> {
       padding: EdgeInsets.symmetric(horizontal: 20.w),
       child: Row(
         children: [
-          _buildTab('All'),
+          _buildTab('All', 'all'.tr),
           SizedBox(width: 10.w),
-          _buildTab('Active'),
+          _buildTab('Active', 'active'.tr),
           SizedBox(width: 10.w),
-          _buildTab('Completed'),
+          _buildTab('Completed', 'completed'.tr),
           SizedBox(width: 10.w),
-          _buildTab('Cancelled'),
+          _buildTab('Cancelled', 'cancelled'.tr),
         ],
       ),
     );
   }
 
-  Widget _buildTab(String label) {
-    bool isSelected = selectedTab == label;
+  Widget _buildTab(String key, String displayLabel) {
+    bool isSelected = selectedTab == key;
     return GestureDetector(
-      onTap: () => setState(() => selectedTab = label),
+      onTap: () => setState(() => selectedTab = key),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
         decoration: BoxDecoration(
@@ -139,7 +139,7 @@ class _MyRequestState extends State<MyRequest> {
           ),
         ),
         child: Text(
-          label,
+          displayLabel,
           style: TextStyle(
             fontSize: 13.sp,
             fontWeight: FontWeight.w500,

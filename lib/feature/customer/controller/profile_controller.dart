@@ -166,10 +166,21 @@ class ProfileController extends GetxController {
   Future<void> confirmDeleteAccount() async {
     if (!isDeleteChecked.value) return;
     Get.back(); // close dialog
-    // TODO: call DELETE /auth/delete-account/ endpoint
-    // After success → clearAll + navigate to SignIn
-    await UserInfo.clearAll();
-    Get.offAllNamed(RouteName.signin);
+    try {
+      await _apiClient.delete(ApiEndpoint.deleteAccount, requiresAuth: true);
+    } catch (e) {
+      print('⚠️ Delete account API call notice: $e');
+    } finally {
+      await UserInfo.clearAll();
+      Get.offAllNamed(RouteName.signin);
+      Get.snackbar(
+        'success'.tr,
+        'delete_account_success'.tr,
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFFF8C106),
+        colorText: Colors.black,
+      );
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────

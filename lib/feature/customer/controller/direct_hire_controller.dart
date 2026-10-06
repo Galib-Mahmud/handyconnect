@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 
 import '../../../core/endpoint/api_client.dart';
 import '../../../core/endpoint/api_endpoint.dart';
-import '../../../core/local_storage/user_info.dart';
 import '../../../route/route_name.dart';
 
 // ── List Model ─────────────────────────────────────────────────────

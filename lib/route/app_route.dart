@@ -1,8 +1,6 @@
 
 import 'package:VonAbisZ/route/route_name.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';
-
 import '../feature/auth/screen/forgot_password_screen.dart';
 import '../feature/auth/screen/otp_verification_screen.dart';
 import '../feature/auth/screen/pass_reset_screen.dart';
@@ -23,6 +21,7 @@ import '../feature/customer/screen/profile_screen.dart';
 import '../feature/customer/screen/recent_request_screen.dart';
 import '../feature/customer/screen/save_address_screen.dart';
 import '../feature/customer/screen/service_provider_screen.dart';
+import '../feature/language/screen/language_screen.dart';
 import '../feature/onboarding/screen/onboarding_screen.dart';
 import '../feature/professional/main_screen_1.dart';
 import '../feature/professional/screen/active_job_screen.dart';
@@ -32,7 +31,6 @@ import '../feature/professional/screen/professional_home_screen.dart';
 import '../feature/professional/screen/professional_profile_screen.dart';
 import '../feature/professional/screen/subscription_screen.dart';
 import '../feature/splash/screen/splash_screen.dart';
-
 
 class AppRoute {
   static final List<GetPage> pages = [
@@ -54,21 +52,15 @@ class AppRoute {
     GetPage(name: RouteName.profile,           page: () => ProfileScreen()),
     GetPage(name: RouteName.recentRequest,     page: () => RecentRequestScreen()),
     GetPage(name: RouteName.savedAddresses,    page: () => SavedAddressesScreen()),
+    GetPage(name: RouteName.language,          page: () => const LanguageScreen()),
     GetPage(name: RouteName.notification,      page: () => NotificationsScreen()),
     GetPage(name: RouteName.newRequest,        page: () => NewRequestScreen()),
     GetPage(name: RouteName.newRequestAnalysis,page: () => NewRequestAnalysisScreen()),
     GetPage(name: RouteName.confirmReq,        page: () => ConfirmRequestScreen()),
     GetPage(name: RouteName.serviceProvider,   page: () => ServiceProviderScreen()),
-    GetPage(name: RouteName.customerinProgress,        page: () => CustomerInProgressScreen()),
+    GetPage(name: RouteName.customerinProgress,page: () => CustomerInProgressScreen()),
     GetPage(name: RouteName.applicationSent,   page: () => ApplicationSentScreen()),
     GetPage(name: RouteName.directHire,        page: () => DirectHire()),
-
-
-
-
-
-
-
 
 
 
@@ -81,13 +73,6 @@ class AppRoute {
     GetPage(name: RouteName.earning,               page: () => EarningsScreen()),
     GetPage(name: RouteName.subscription,          page: () => SubscriptionScreen()),
     GetPage(name: RouteName.onboarding,            page: () => Onboarding()),
-
-
-
-
-
-
-
 
 
 

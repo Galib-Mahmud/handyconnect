@@ -41,7 +41,7 @@ class EarningsController extends GetxController {
   Future<void> fetchEarnings() async {
     try {
       isLoading.value = true;
-      final response = await _apiClient.get('/pro/earnings/', requiresAuth: true);
+      final response = await _apiClient.get(ApiEndpoint.proEarnings, requiresAuth: true);
 
       // Map Stats safely
       totalEarnings.value = (response['total_earnings'] ?? 0).toString();

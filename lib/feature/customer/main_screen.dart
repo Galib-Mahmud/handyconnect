@@ -4,7 +4,7 @@ import 'package:VonAbisZ/feature/customer/screen/my_request_screen.dart';
 import 'package:VonAbisZ/feature/customer/screen/profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
+import 'package:get/get.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key, this.initialIndex = 0});
@@ -28,7 +28,6 @@ class _MainScreen1State extends State<MainScreen> {
     HomeDashboardScreen(),
     MyRequest(),
     ProfileScreen(),
-
   ];
 
   @override
@@ -57,17 +56,17 @@ class _MainScreen1State extends State<MainScreen> {
         children: [
           _buildNavItem(
             iconPath: 'assets/images/auth/home.png',
-            label: 'Home',
+            label: 'nav_home'.tr,
             index: 0,
           ),
           _buildNavItem(
             iconPath: 'assets/images/auth/request.png',
-            label: 'Request',
+            label: 'nav_request'.tr,
             index: 1,
           ),
           _buildNavItem(
             iconPath: 'assets/images/auth/profile.png',
-            label: 'Profile',
+            label: 'nav_profile'.tr,
             index: 2,
           ),
         ],

@@ -1,7 +1,5 @@
 // lib/features/professional/home/controllers/professional_home_controller.dart
 
-import 'dart:io';
-
 import 'package:get/get.dart';
 
 
@@ -166,10 +164,22 @@ class ProfessionalHomeController extends GetxController {
   }
 
   // ── Toggle Online ─────────────────────────────────────────────────
-  void toggleOnline(bool val) {
+  Future<void> toggleOnline(bool val) async {
     isOnline.value = val;
-    print('🔄 [ONLINE STATUS] Changed to: $val');
-    // TODO: call PATCH /services/providers/toggle-online/ if API exists
+    print('🔄 [ONLINE STATUS] Changing to: $val');
+    try {
+      final res = await _apiClient.post(
+        ApiEndpoint.toggleOnline,
+        body: {'is_online': val},
+        requiresAuth: true,
+      );
+      if (res != null && res['is_online'] != null) {
+        isOnline.value = res['is_online'] == true;
+      }
+      print('✅ [ONLINE STATUS] Successfully set to ${isOnline.value}');
+    } catch (e) {
+      print('⚠️ [ONLINE STATUS] Error toggling status: $e');
+    }
   }
 
   // ── Helper: icon string → asset path ─────────────────────────────

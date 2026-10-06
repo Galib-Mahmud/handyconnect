@@ -5,11 +5,7 @@ import 'package:VonAbisZ/feature/professional/screen/professional_home_screen.da
 import 'package:VonAbisZ/feature/professional/screen/professional_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
-
-
-
-
+import 'package:get/get.dart';
 
 class MainScreen1 extends StatefulWidget {
   const MainScreen1({super.key, this.initialIndex = 0});
@@ -62,21 +58,22 @@ class _MainScreen1State extends State<MainScreen1> {
         children: [
           _buildNavItem(
             iconPath: 'assets/images/auth/home.png',
-            label: 'Home',
+            label: 'nav_home'.tr,
             index: 0,
           ),
           _buildNavItem(
             iconPath: 'assets/images/auth/request.png',
-            label: 'Request',
+            label: 'nav_requests'.tr,
             index: 1,
-          ),_buildNavItem(
+          ),
+          _buildNavItem(
             iconPath: 'assets/images/splash/doller.png',
-            label: 'Earnings',
+            label: 'nav_earnings'.tr,
             index: 2,
           ),
           _buildNavItem(
             iconPath: 'assets/images/auth/profile.png',
-            label: 'Profile',
+            label: 'nav_profile'.tr,
             index: 3,
           ),
         ],

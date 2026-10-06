@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'core/localization/app_translations.dart';
 import 'core/local_storage/user_info.dart';
 import 'core/theme/app_theme.dart';
 
@@ -18,14 +19,16 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  final bool isLoggedIn        = await UserInfo.isLoggedIn();
-  final String? role           = UserInfo.getRoleSync();
+  final bool isLoggedIn          = await UserInfo.isLoggedIn();
+  final String? role             = UserInfo.getRoleSync();
   final String? onboardingStatus = UserInfo.getOnboardingStatusSync();
+  final String initialLang       = UserInfo.getLanguageCodeSync();
 
   runApp(MyApp(
     isLoggedIn: isLoggedIn,
     role: role,
     onboardingStatus: onboardingStatus,
+    initialLang: initialLang,
   ));
 }
 
@@ -33,12 +36,14 @@ class MyApp extends StatelessWidget {
   final bool isLoggedIn;
   final String? role;
   final String? onboardingStatus;
+  final String initialLang;
 
   const MyApp({
     super.key,
     required this.isLoggedIn,
     this.role,
     this.onboardingStatus,
+    required this.initialLang,
   });
 
   String get _determineInitialRoute {
@@ -65,13 +70,14 @@ class MyApp extends StatelessWidget {
         return GetMaterialApp(
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
+          translations: AppTranslations(),
+          locale: initialLang == 'de'
+              ? const Locale('de', 'DE')
+              : const Locale('en', 'US'),
+          fallbackLocale: const Locale('en', 'US'),
           initialRoute: _determineInitialRoute,
-          getPages:  AppRoute.pages,
+          getPages: AppRoute.pages,
           defaultTransition: Transition.cupertino,
-
-          // ✅ full: controller বন্ধ হলে memory থেকে সরিয়ে দেয়
-          //    keepFactory ব্যবহার করলে deleted controller আবার recreate হয়
-          //    যেটা তোমার HomeController বারবার delete/recreate করছিল
           smartManagement: SmartManagement.full,
         );
       },

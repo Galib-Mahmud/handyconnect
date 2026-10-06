@@ -180,7 +180,7 @@ class HomeDashboardScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Good Morning!',
+                    'hello'.tr,
                     style: TextStyle(
                       fontSize: 13.sp,
                       color: const Color(0xFF757575),
@@ -252,7 +252,7 @@ class HomeDashboardScreen extends StatelessWidget {
               child: TextField(
                 onChanged: (val) => ctrl.searchQuery.value = val,
                 decoration: InputDecoration(
-                  hintText: 'What do you need help with?',
+                  hintText: 'what_service_do_you_need'.tr,
                   hintStyle: TextStyle(
                     fontSize: 14.sp,
                     color: const Color(0xFFBDBDBD),
@@ -285,7 +285,7 @@ class HomeDashboardScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Recent Request',
+            'recent_requests'.tr,
             style: TextStyle(
               fontSize: 17.sp,
               fontWeight: FontWeight.w700,
@@ -298,7 +298,7 @@ class HomeDashboardScreen extends StatelessWidget {
               Get.to(() => const RecentRequestScreen());
             },
             child: Text(
-              'See All',
+              'view_all'.tr,
               style: TextStyle(
                 fontSize: 13.sp,
                 color: const Color(0xFF9E9E9E),
@@ -327,7 +327,7 @@ class HomeDashboardScreen extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                'No recent requests',
+                'no_recent_requests'.tr,
                 style: TextStyle(
                   fontSize: 14.sp,
                   color: const Color(0xFF9E9E9E),
@@ -514,7 +514,10 @@ class HomeDashboardScreen extends StatelessWidget {
     VoidCallback? onTap,
   }) {
     final icon     = category['icon'] ?? '';
-    final label    = category['name_en'] ?? '';
+    final isDe     = Get.locale?.languageCode == 'de';
+    final nameDe   = (category['name_de'] as String?) ?? '';
+    final nameEn   = (category['name_en'] as String?) ?? '';
+    final label    = (isDe && nameDe.isNotEmpty) ? nameDe : nameEn;
     final colorHex = category['color'] as String?;
 
     return GestureDetector(

@@ -286,12 +286,12 @@ class InProgressController extends GetxController {
     final currentOrder = _statusOrder[apiStatus] ?? 0;
 
     final definitions = [
-      ('Pending', 'request_received', 0),
-      ('Job Accepted', null, 1),
-      ('On The Way', 'on_the_way', 2),
-      ('In Progress', 'in_progress', 3),
-      ('Completed', 'completed', 4),
-      ('Reviewed', null, 5),
+      ('step_pending'.tr, 'request_received', 0),
+      ('step_accepted'.tr, null, 1),
+      ('step_on_the_way'.tr, 'on_the_way', 2),
+      ('step_in_progress'.tr, 'in_progress', 3),
+      ('step_completed'.tr, 'completed', 4),
+      ('step_reviewed'.tr, null, 5),
     ];
 
     return definitions.map((def) {
@@ -323,17 +323,17 @@ class InProgressController extends GetxController {
   String _activeSubtitle(String apiStatus) {
     switch (apiStatus) {
       case 'PENDING':
-        return 'Waiting for a provider to accept…';
+        return 'sub_waiting_provider'.tr;
       case 'ACCEPTED':
-        return 'A professional has accepted your request.';
+        return 'sub_provider_accepted'.tr;
       case 'ON_THE_WAY':
-        return "Your professional is on the way!";
+        return 'sub_provider_on_the_way'.tr;
       case 'IN_PROGRESS':
-        return 'Work is currently in progress.';
+        return 'sub_work_in_progress'.tr;
       case 'COMPLETED':
-        return 'Job completed — please leave a review.';
+        return 'sub_job_completed'.tr;
       case 'REVIEWED':
-        return 'Thank you for your review!';
+        return 'sub_thank_you_review'.tr;
       default:
         return '';
     }

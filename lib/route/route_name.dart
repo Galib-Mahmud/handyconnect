@@ -25,6 +25,7 @@ class RouteName{
   static const String applicationSent = '/applicationSent';
   static const String directHire = '/directHire';
   static const String savedAddresses = '/savedAddresses';
+  static const String language = '/language';
 
 
 

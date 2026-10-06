@@ -72,9 +72,13 @@ class ApiEndpoint {
   static String providerDetails(int id) => '/services/providers/$id/';
   static String inviteProvider(int id)  => '/services/providers/$id/invite/';
 
+  // ── Miscellaneous & Account ───────────────────────────────────────
+  static const String deleteAccount   = '/services/delete-account/';
+  static const String support         = '/services/support/';
+  static const String addresses       = '/services/addresses/';
+  static const String toggleOnline    = '/services/requests/toggle-online/';
+  static const String proEarnings     = '/pro/earnings/';
+
   //Google
-
   static const String googleLogin = '/auth/google/';
-
-
 }

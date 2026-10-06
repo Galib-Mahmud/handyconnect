@@ -51,7 +51,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
 
                   // ── Active Jobs ──────────────────────────────────
                   Obx(() => _buildSectionHeader(
-                    title: 'Active Jobs',
+                    title: 'active_jobs'.tr,
                     badge: c.activeJobs.length.toString(),
                     showViewAll: c.activeJobs.isNotEmpty,
                     onViewAll: () {
@@ -61,7 +61,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
                   SizedBox(height: 10.h),
                   Obx(() {
                     if (c.activeJobs.isEmpty) {
-                      return _buildEmptyCard('No active jobs');
+                      return _buildEmptyCard('no_active_jobs'.tr);
                     }
                     return Column(
                       children: c.activeJobs
@@ -74,7 +74,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
 
                   // ── Emergency Requests ───────────────────────────
                   Obx(() => _buildSectionHeader(
-                    title: 'Emergency Request',
+                    title: 'emergency_requests'.tr,
                     badge: c.emergencyRequests.length.toString(),
                     showViewAll: c.emergencyRequests.isNotEmpty,
                     onViewAll: () {
@@ -84,7 +84,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
                   SizedBox(height: 10.h),
                   Obx(() {
                     if (c.emergencyRequests.isEmpty) {
-                      return _buildEmptyCard('No emergency requests');
+                      return _buildEmptyCard('no_job_requests'.tr);
                     }
                     return Column(
                       children: c.emergencyRequests
@@ -100,7 +100,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
 
                   // ── New Requests ─────────────────────────────────
                   Obx(() => _buildSectionHeader(
-                    title: 'New Requests',
+                    title: 'new_requests'.tr,
                     badge: c.newRequests.length.toString(),
                     showViewAll: c.newRequests.isNotEmpty,
                     onViewAll: () {
@@ -110,7 +110,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
                   SizedBox(height: 10.h),
                   Obx(() {
                     if (c.newRequests.isEmpty) {
-                      return _buildEmptyCard('No new requests');
+                      return _buildEmptyCard('no_job_requests'.tr);
                     }
                     return Column(
                       children: c.newRequests
@@ -130,7 +130,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildSectionHeader(
-                        title: 'Private Requests',
+                        title: 'private_requests'.tr,
                         badge: c.privateRequests.length.toString(),
                         showViewAll: true,
                         onViewAll: () {   Get.offAll(() => MainScreen1(initialIndex: 1));},
@@ -385,7 +385,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  c.isOnline.value ? "You're Online" : "You're Offline",
+                  c.isOnline.value ? 'online'.tr : 'offline'.tr,
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
@@ -431,7 +431,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
                   color: const Color(0xFFEF5350), size: 20.sp),
             ),
             value: '${c.emergencyCount.value}',
-            label: 'Emergency',
+            label: 'filter_emergency'.tr,
           ),
         ),
         SizedBox(width: 10.w),
@@ -446,7 +446,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
                   color: const Color(0xFF43A047), size: 20.sp),
             ),
             value: '${c.jobsCount.value}',
-            label: 'Jobs',
+            label: 'nav_requests'.tr,
           ),
         ),
         SizedBox(width: 10.w),
@@ -461,7 +461,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
                   color: const Color(0xFFF8C106), size: 20.sp),
             ),
             value: c.rating.value.toStringAsFixed(1),
-            label: 'Rating',
+            label: 'rating'.tr,
           ),
         ),
       ],
@@ -545,7 +545,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
             onTap: onViewAll,
             child: Row(
               children: [
-                Text('View All',
+                Text('view_all'.tr,
                     style: TextStyle(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w600,

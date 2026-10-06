@@ -99,6 +99,17 @@ class UserInfo {
   static Future<bool> getOnboardingCompleted() async =>
       _p.getBool('onboarding_completed') ?? false;
 
-  // ======= Clear All (logout) ======= //
-  static Future<void> clearAll() async => await _p.clear();
+  // ======= Language ======= //
+  static Future<void> setLanguageCode(String code) async =>
+      await _p.setString('language_code', code);
+  static String getLanguageCodeSync() => _p.getString('language_code') ?? 'en';
+  static Future<String> getLanguageCode() async =>
+      _p.getString('language_code') ?? 'en';
+
+  // ======= Clear All (logout, preserves language) ======= //
+  static Future<void> clearAll() async {
+    final lang = getLanguageCodeSync();
+    await _p.clear();
+    await setLanguageCode(lang);
+  }
 }

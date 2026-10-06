@@ -100,7 +100,7 @@ class _ConfirmRequestScreenState extends State<ConfirmRequestScreen> {
                   ),
                   SizedBox(width: 16.w),
                   Text(
-                    'New Request',
+                    'new_request'.tr,
                     style: TextStyle(
                         fontSize: 20.sp,
                         fontWeight: FontWeight.w700,
@@ -162,7 +162,7 @@ class _ConfirmRequestScreenState extends State<ConfirmRequestScreen> {
                               ? const CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2)
                               : Text(
-                            'Submit Request',
+                            'send_offer'.tr,
                             style: TextStyle(
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w600,
@@ -299,7 +299,7 @@ class _ConfirmRequestScreenState extends State<ConfirmRequestScreen> {
               ),
               SizedBox(width: 10.w),
               Text(
-                'AI Diagnosis',
+                'ai_diagnosis'.tr,
                 style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
@@ -332,7 +332,7 @@ class _ConfirmRequestScreenState extends State<ConfirmRequestScreen> {
 
           // Detected Issue
           if (issue.isNotEmpty) ...[
-            Text('Detected Issue',
+            Text('detected_issue'.tr,
                 style: TextStyle(
                     fontSize: 12.sp, color: const Color(0xFF9E9E9E))),
             SizedBox(height: 4.h),
@@ -348,7 +348,7 @@ class _ConfirmRequestScreenState extends State<ConfirmRequestScreen> {
 
           // Description
           if (desc.isNotEmpty) ...[
-            Text('Description',
+            Text('problem_description'.tr,
                 style: TextStyle(
                     fontSize: 12.sp, color: const Color(0xFF9E9E9E))),
             SizedBox(height: 4.h),
@@ -547,7 +547,7 @@ class _ConfirmRequestScreenState extends State<ConfirmRequestScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text('Estimated Total',
+        Text('estimated_cost'.tr,
             style: TextStyle(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w500,

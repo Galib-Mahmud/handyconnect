@@ -48,30 +48,31 @@ class ProfileScreen extends StatelessWidget {
                         // ── Menu Items ────────────────────────────
                         _buildMenuItem(
                           icon: Icons.location_on_outlined,
-                          title: 'Saved Addresses',
+                          title: 'saved_addresses'.tr,
                           subtitle: '3 saved',
                           onTap: () {
                             Get.toNamed(RouteName.savedAddresses);
-
                           },
                         ),
                         SizedBox(height: 12.h),
                         _buildMenuItem(
                           icon: Icons.notifications_outlined,
-                          title: 'Notifications',
+                          title: 'notifications'.tr,
                           subtitle: 'On',
                           onTap: () {
-
                             Get.toNamed(RouteName.notification);
-
                           },
                         ),
                         SizedBox(height: 12.h),
                         _buildMenuItem(
                           icon: Icons.language_outlined,
-                          title: 'Language',
-                          subtitle: 'English',
-                          onTap: () {},
+                          title: 'language'.tr,
+                          subtitle: (Get.locale?.languageCode == 'de')
+                              ? 'lang_german'.tr
+                              : 'lang_english'.tr,
+                          onTap: () {
+                            Get.toNamed(RouteName.language);
+                          },
                         ),
                         SizedBox(height: 32.h),
 
@@ -95,7 +96,7 @@ class ProfileScreen extends StatelessWidget {
                                     color: const Color(0xFFE53935), size: 18.sp),
                                 SizedBox(width: 8.w),
                                 Text(
-                                  'Delete Account',
+                                  'delete_account'.tr,
                                   style: TextStyle(
                                     fontSize: 14.sp,
                                     fontWeight: FontWeight.w600,
@@ -118,7 +119,7 @@ class ProfileScreen extends StatelessWidget {
                                   color: const Color(0xFFE53935), size: 20.sp),
                               SizedBox(width: 8.w),
                               Text(
-                                'Log Out',
+                                'log_out'.tr,
                                 style: TextStyle(
                                   fontSize: 15.sp,
                                   fontWeight: FontWeight.w600,
@@ -153,7 +154,7 @@ class ProfileScreen extends StatelessWidget {
             child: Icon(Icons.arrow_back, size: 22.sp, color: const Color(0xFF212121)),
           ),
           Text(
-            'Profile',
+            'nav_profile'.tr,
             style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w700,

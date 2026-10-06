@@ -94,4 +94,10 @@ class MyRequestController extends GetxController {
     'COMPLETED'  : 0xFFE8F5E9,
     'CANCELLED'  : 0xFFF44336,
   };
+
+  static int getStatusTextColor(String status) =>
+      _statusTextColor[status.toUpperCase()] ?? 0xFF9E9E9E;
+
+  static int getStatusBgColor(String status) =>
+      _statusBgColor[status.toUpperCase()] ?? 0xFFF5F5F5;
 }

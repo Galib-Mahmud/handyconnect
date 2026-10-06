@@ -55,32 +55,32 @@ class SignUpScreen extends StatelessWidget {
                 // ),
                 SizedBox(height: 14.h),
 
-                // ── Continue with Apple ────────────────────────────
-                _buildSocialButton(
-                  onTap: c.continueWithApple,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.apple, size: 22.sp, color: Colors.black),
-                      SizedBox(width: 10.w),
-                      Text(
-                        'Continue with Apple',
-                        style: TextStyle(
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF212121),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                // // ── Continue with Apple ────────────────────────────
+                // _buildSocialButton(
+                //   onTap: c.continueWithApple,
+                //   child: Row(
+                //     mainAxisAlignment: MainAxisAlignment.center,
+                //     children: [
+                //       Icon(Icons.apple, size: 22.sp, color: Colors.black),
+                //       SizedBox(width: 10.w),
+                //       Text(
+                //         'Continue with Apple',
+                //         style: TextStyle(
+                //           fontSize: 15.sp,
+                //           fontWeight: FontWeight.w500,
+                //           color: const Color(0xFF212121),
+                //         ),
+                //       ),
+                //     ],
+                //   ),
+                // ),
 
                 SizedBox(height: 20.h),
 
                 // Full Name TextField
                 CustomTextField(
                   icon: Icons.person_outline,
-                  labelText: 'Enter Full Name',
+                  labelText: 'enter_full_name'.tr,
                   controller: c.fullNameController,
                   keyboardType: TextInputType.name,
                 ),
@@ -90,7 +90,7 @@ class SignUpScreen extends StatelessWidget {
                 // Email TextField
                 CustomTextField(
                   icon: Icons.email_outlined,
-                  labelText: 'Enter Email Address',
+                  labelText: 'enter_email'.tr,
                   controller: c.signUpEmailController,
                   keyboardType: TextInputType.emailAddress,
                 ),
@@ -100,7 +100,7 @@ class SignUpScreen extends StatelessWidget {
                 // Mobile Number TextField
                 CustomTextField(
                   icon: Icons.phone_outlined,
-                  labelText: 'Enter Mobile Number',
+                  labelText: 'enter_phone_number'.tr,
                   controller: c.phoneController,
                   keyboardType: TextInputType.phone,
                 ),
@@ -111,7 +111,7 @@ class SignUpScreen extends StatelessWidget {
                 // Password Field
                 Obx(() => CustomTextField(
                   icon: Icons.lock_outline,
-                  labelText: 'Enter Password',
+                  labelText: 'enter_password'.tr,
                   controller: c.signUpPasswordController,
                   obscureText: !c.isSignUpPasswordVisible.value,
                   suffixIcon: GestureDetector(
@@ -131,7 +131,7 @@ class SignUpScreen extends StatelessWidget {
 // Re-Enter Password Field
                 Obx(() => CustomTextField(
                   icon: Icons.lock_outline,
-                  labelText: 'Re Enter Password',
+                  labelText: 'confirm_password'.tr,
                   controller: c.signUpRePasswordController,
                   obscureText: !c.isSignUpRePasswordVisible.value,
                   suffixIcon: GestureDetector(
@@ -149,7 +149,7 @@ class SignUpScreen extends StatelessWidget {
 
                 // ── Register As label ─────────────────────────────
                 Text(
-                  'Register As',
+                  'select_role'.tr,
                   style: TextStyle(
                     fontFamily: "Inter",
                     fontSize: 16.sp,
@@ -165,7 +165,7 @@ class SignUpScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _RoleCard(
-                        label: 'Provider',
+                        label: 'role_provider'.tr,
                         icon: Icons.handyman_outlined,
                         isSelected: c.selectedRole.value == 'PROVIDER',
                         onTap: () => c.selectRole('PROVIDER'),
@@ -174,7 +174,7 @@ class SignUpScreen extends StatelessWidget {
                     SizedBox(width: 12.w),
                     Expanded(
                       child: _RoleCard(
-                        label: 'Customer',
+                        label: 'role_customer'.tr,
                         icon: Icons.person_outline,
                         isSelected: c.selectedRole.value == 'CUSTOMER',
                         onTap: () => c.selectRole('CUSTOMER'),
@@ -187,7 +187,7 @@ class SignUpScreen extends StatelessWidget {
 
                 // Sign Up Button
                 Obx(() => CustomButton(
-                  text: c.isLoading.value ? 'Signing Up...' : 'Sign Up',
+                  text: c.isLoading.value ? 'please_wait'.tr : 'sign_up'.tr,
                   onPressed: c.isLoading.value ? null : () => c.register(),
                 )),
 
@@ -198,7 +198,7 @@ class SignUpScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Already have an account?  ",
+                      'already_have_account'.tr,
                       style: TextStyle(
                         fontFamily: "Inter",
                         fontSize: 15.sp,
@@ -208,7 +208,7 @@ class SignUpScreen extends StatelessWidget {
                     GestureDetector(
                       onTap: () => Get.back(),
                       child: Text(
-                        "Login Here",
+                        'log_in'.tr,
                         style: TextStyle(
                           fontFamily: "Inter",
                           fontSize: 16.sp,

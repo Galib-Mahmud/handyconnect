@@ -27,8 +27,8 @@ class _NewRequestAnalysisScreenState extends State<NewRequestAnalysisScreen> {
   Timer? _processTimer;
   Timer? _pollTimer;
 
-  String _statusText = 'Analyzing Issue...';
-  String _subText    = 'Our AI is diagnosing the problem';
+  String _statusText = 'analyzing_issue'.tr;
+  String _subText    = 'ai_diagnosing'.tr;
   bool   _hasError   = false;
 
   @override
@@ -161,7 +161,7 @@ class _NewRequestAnalysisScreenState extends State<NewRequestAnalysisScreen> {
                   ),
                   SizedBox(width: 16.w),
                   Text(
-                    'New Request',
+                    'new_request'.tr,
                     style: TextStyle(
                       fontSize: 20.sp,
                       fontWeight: FontWeight.w700,
@@ -241,7 +241,7 @@ class _NewRequestAnalysisScreenState extends State<NewRequestAnalysisScreen> {
                               borderRadius: BorderRadius.circular(24.r),
                             ),
                             child: Text(
-                              'Go Back',
+                              'go_back'.tr,
                               style: TextStyle(
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.w600,

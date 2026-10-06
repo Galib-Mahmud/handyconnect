@@ -51,7 +51,7 @@ class CustomerInProgressScreen extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10.r)),
                     ),
-                    child: Text('Retry',
+                    child: Text('retry'.tr,
                         style:
                         TextStyle(fontSize: 14.sp, color: Colors.white)),
                   ),
@@ -120,7 +120,7 @@ class CustomerInProgressScreen extends StatelessWidget {
           ),
           SizedBox(width: 16.w),
           Text(
-            'In Progress',
+            'step_in_progress'.tr,
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w700,
@@ -278,7 +278,7 @@ class CustomerInProgressScreen extends StatelessWidget {
         Row(
           children: [
             Text(
-              'Interested Providers',
+              'interested_providers'.tr,
               style: TextStyle(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w700,
@@ -481,7 +481,7 @@ class CustomerInProgressScreen extends StatelessWidget {
                       strokeWidth: 2, color: Colors.white),
                 )
                     : Text(
-                  'Hire',
+                  'hire_now'.tr,
                   style: TextStyle(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w700,
@@ -519,7 +519,7 @@ class CustomerInProgressScreen extends StatelessWidget {
           TextButton(
             onPressed: () => Get.back(),
             child: Text(
-              'Cancel',
+              'cancel'.tr,
               style:
               TextStyle(fontSize: 14.sp, color: const Color(0xFF9E9E9E)),
             ),
@@ -535,7 +535,7 @@ class CustomerInProgressScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10.r)),
             ),
             child: Text(
-              'Hire',
+              'hire_now'.tr,
               style: TextStyle(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w700,
@@ -568,7 +568,7 @@ class CustomerInProgressScreen extends StatelessWidget {
                   color: const Color(0xFF43A047), size: 44.sp),
               SizedBox(height: 12.h),
               Text(
-                'Thank you for your review!',
+                'sub_thank_you_review'.tr,
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w700,
@@ -605,7 +605,7 @@ class CustomerInProgressScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Write Your Review',
+              'leave_review'.tr,
               style: TextStyle(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w800,
@@ -626,7 +626,7 @@ class CustomerInProgressScreen extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'Rate your service',
+                  'rating'.tr,
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w700,
@@ -759,7 +759,7 @@ class CustomerInProgressScreen extends StatelessWidget {
                         color: Colors.white, strokeWidth: 2.5),
                   )
                       : Text(
-                    'Submit Review',
+                    'submit_review'.tr,
                     style: TextStyle(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w700,
@@ -781,7 +781,7 @@ class CustomerInProgressScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Status Timeline',
+          'timeline'.tr,
           style: TextStyle(
             fontSize: 16.sp,
             fontWeight: FontWeight.w700,
@@ -924,7 +924,7 @@ class CustomerInProgressScreen extends StatelessWidget {
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    'Cancel Order',
+                    'cancel_order'.tr,
                     style: TextStyle(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
@@ -947,7 +947,7 @@ class CustomerInProgressScreen extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  'Go to Home',
+                  'nav_home'.tr,
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w700,

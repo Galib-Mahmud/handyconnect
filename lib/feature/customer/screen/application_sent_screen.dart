@@ -44,7 +44,7 @@ class ApplicationSentScreen extends StatelessWidget {
 
               // ── Header ──────────────────────────────────────────
               Text(
-                'Application Sent!',
+                'application_sent'.tr,
                 style: TextStyle(
                   fontSize: 24.sp,
                   fontWeight: FontWeight.w800,
@@ -53,7 +53,7 @@ class ApplicationSentScreen extends StatelessWidget {
               ),
               SizedBox(height: 12.h),
               Text(
-                "Your request has been submitted. Here's\nwhat happens next.",
+                'application_sent_sub'.tr,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14.sp,
@@ -83,7 +83,7 @@ class ApplicationSentScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'What happens next',
+                      'what_happens_next'.tr,
                       style: TextStyle(
                         fontSize: 12.sp,
                         color: const Color(0xFF98A2B3),
@@ -96,8 +96,8 @@ class ApplicationSentScreen extends StatelessWidget {
                       icon: Icons.auto_awesome,
                       iconColor: const Color(0xFFF8C106),
                       bgColor: const Color(0xFFFFF9E7),
-                      title: 'Automated Matching',
-                      desc: 'Our system is finding the best plumbers in your area based on your zip code and issue type.',
+                      title: 'auto_matching'.tr,
+                      desc: 'auto_matching_desc'.tr,
                     ),
                     SizedBox(height: 24.h),
                     _buildStepItem(
@@ -164,7 +164,7 @@ class ApplicationSentScreen extends StatelessWidget {
                     SizedBox(width: 12.w),
                     Expanded(
                       child: Text(
-                        "Free & non-binding — you're under no obligation to accept any quote.",
+                        'free_guarantee'.tr,
                         style: TextStyle(
                           fontSize: 13.sp,
                           color: const Color(0xFF039855),
@@ -191,7 +191,7 @@ class ApplicationSentScreen extends StatelessWidget {
                     elevation: 0,
                   ),
                   child: Text(
-                    'Done',
+                    'done'.tr,
                     style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700, color: Colors.white),
                   ),
                 ),

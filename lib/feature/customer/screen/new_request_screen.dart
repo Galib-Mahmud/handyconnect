@@ -70,12 +70,16 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
   // ── Parse service info from initialize response ───────────────────
   String get _serviceName {
     final details = _serviceDetails['service_details'];
+    final lang = Get.locale?.languageCode ?? 'en';
     if (details is Map) {
+      if (lang == 'de' && (details['name_de'] ?? '').toString().isNotEmpty) {
+        return details['name_de'].toString();
+      }
       return (details['name_en'] ?? '').toString().isNotEmpty
           ? details['name_en'].toString()
-          : (_serviceDetails['service_name'] ?? 'Service Request').toString();
+          : (_serviceDetails['service_name'] ?? 'new_request'.tr).toString();
     }
-    return (_serviceDetails['service_name'] ?? 'Service Request').toString();
+    return (_serviceDetails['service_name'] ?? 'new_request'.tr).toString();
   }
 
   String get _serviceIcon {
@@ -135,16 +139,16 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
 
                     // ── Problem ──────────────────────────────────
                     _buildCard(
-                      title: 'Describe your problem',
-                      subtitle: 'Tell us what went wrong',
+                      title: 'problem_description'.tr,
+                      subtitle: 'describe_problem_hint'.tr,
                       child: _buildDescriptionField(),
                     ),
                     SizedBox(height: 16.h),
 
                     // ── Upload ───────────────────────────────────
                     _buildCard(
-                      title: 'Upload photos',
-                      subtitle: 'Optional · helps diagnose faster',
+                      title: 'upload_photos'.tr,
+                      subtitle: 'upload_photos_hint'.tr,
                       child: Column(
                         children: [
                           _buildUploadArea(ctrl),
@@ -161,20 +165,20 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
 
                     // ── Location details ─────────────────────────
                     _buildCard(
-                      title: 'Location',
+                      title: 'address'.tr,
                       subtitle: 'Where do you need help?',
                       child: Column(
                         children: [
                           _buildInputField(
                             controller: _addressController,
-                            hintText: 'Street and house address',
+                            hintText: 'enter_address_hint'.tr,
                             icon: Icons.location_on_rounded,
                             iconColor: const Color(0xFFE5484D),
                           ),
                           SizedBox(height: 12.h),
                           _buildInputField(
                             controller: _zipController,
-                            hintText: 'Zip code',
+                            hintText: 'zip_code'.tr,
                             icon: Icons.markunread_mailbox_rounded,
                             iconColor: _inkSoft,
                             keyboardType: TextInputType.number,
@@ -185,7 +189,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
                           SizedBox(height: 12.h),
                           _buildInputField(
                             controller: _phoneController,
-                            hintText: 'Phone number (optional)',
+                            hintText: 'enter_phone_number'.tr,
                             icon: Icons.phone_rounded,
                             iconColor: _inkSoft,
                             keyboardType: TextInputType.phone,
@@ -227,7 +231,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Service Request',
+                'new_request'.tr,
                 style: TextStyle(
                   fontSize: 19.sp,
                   fontWeight: FontWeight.w700,
@@ -586,7 +590,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
       activeColor: const Color(0xFFE5484D),
       onTap: () => ctrl.isEmergency.toggle(),
       icon: Icons.bolt_rounded,
-      title: 'Mark as emergency',
+      title: 'priority_request'.tr,
       badge: '+€30',
       badgeColor: const Color(0xFFE5484D),
       subtitle: 'Priority placement and faster response from providers.',
@@ -751,7 +755,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Continue to Diagnosis',
+                'continue'.tr,
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w700,

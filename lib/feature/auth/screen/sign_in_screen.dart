@@ -73,7 +73,7 @@ class SignInScreen extends StatelessWidget {
               // ── Email field ────────────────────────────────────
               CustomTextField(
                 icon: Icons.email_outlined,
-                labelText: 'Enter Email Address',
+                labelText: 'enter_email'.tr,
                 controller: c.emailController,
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -82,7 +82,7 @@ class SignInScreen extends StatelessWidget {
               // ── Password field ─────────────────────────────────
               Obx(() => CustomTextField(
                 icon: Icons.lock_outline_rounded,
-                labelText: 'Enter Password',
+                labelText: 'enter_password'.tr,
                 controller: c.passwordController,
                 obscureText: !c.isPasswordVisible.value,
                 suffixIcon: GestureDetector(
@@ -102,7 +102,7 @@ class SignInScreen extends StatelessWidget {
               GestureDetector(
                 onTap: c.goToForgotPassword,
                 child: Text(
-                  'Forgot Password?',
+                  'forgot_password'.tr,
                   style: TextStyle(
                     fontSize: 14.sp,
                     color: const Color(0xFF9E9E9E),
@@ -134,7 +134,7 @@ class SignInScreen extends StatelessWidget {
                     ),
                   )
                       : Text(
-                    'Sign In',
+                    'sign_in'.tr,
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w700,
@@ -150,14 +150,14 @@ class SignInScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Don't have an account? ",
+                    'dont_have_account'.tr,
                     style: TextStyle(
                         fontSize: 15.sp, color: const Color(0xFF9E9E9E)),
                   ),
                   GestureDetector(
                     onTap: c.goToSignUp,
                     child: Text(
-                      'Sign Up',
+                      'sign_up'.tr,
                       style: TextStyle(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w700,

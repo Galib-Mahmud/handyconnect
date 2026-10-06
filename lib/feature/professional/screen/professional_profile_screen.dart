@@ -79,7 +79,66 @@ class ProfessionalProfileScreen extends StatelessWidget {
                       _RatingSection(pc: pc),
                       SizedBox(height: 24.h),
                       _BioSection(pc: pc),
-                      SizedBox(height: 8.h),
+                      SizedBox(height: 16.h),
+
+                      // Language
+                      GestureDetector(
+                        onTap: () => Get.toNamed(RouteName.language),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14.r),
+                            border: Border.all(color: const Color(0xFFEEEEEE), width: 1),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40.w,
+                                height: 40.w,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF5F5F5),
+                                  borderRadius: BorderRadius.circular(10.r),
+                                ),
+                                child: Icon(Icons.language_outlined,
+                                    color: const Color(0xFF424242), size: 22.sp),
+                              ),
+                              SizedBox(width: 14.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('language'.tr,
+                                        style: TextStyle(
+                                            fontSize: 15.sp,
+                                            fontWeight: FontWeight.w600,
+                                            color: const Color(0xFF212121))),
+                                    SizedBox(height: 2.h),
+                                    Text(
+                                      (Get.locale?.languageCode == 'de')
+                                          ? 'lang_german'.tr
+                                          : 'lang_english'.tr,
+                                      style: TextStyle(
+                                          fontSize: 12.sp,
+                                          color: const Color(0xFF9E9E9E)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward_ios,
+                                  color: const Color(0xFF9E9E9E), size: 16.sp),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 20.h),
 
                       // Delete Account
                       GestureDetector(
@@ -100,7 +159,7 @@ class ProfessionalProfileScreen extends StatelessWidget {
                                   color: const Color(0xFFE53935),
                                   size: 18.sp),
                               SizedBox(width: 8.w),
-                              Text('Delete Account',
+                              Text('delete_account'.tr,
                                   style: TextStyle(
                                     fontSize: 14.sp,
                                     fontWeight: FontWeight.w600,
@@ -121,7 +180,7 @@ class ProfessionalProfileScreen extends StatelessWidget {
                             Icon(Icons.logout_rounded,
                                 color: const Color(0xFFE53935), size: 20.sp),
                             SizedBox(width: 8.w),
-                            Text('Log Out',
+                            Text('log_out'.tr,
                                 style: TextStyle(
                                   fontSize: 15.sp,
                                   fontWeight: FontWeight.w600,
