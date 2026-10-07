@@ -1,10 +1,15 @@
 // lib/core/endpoint/api_client.dart
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
+import '../../route/route_name.dart';
 import '../local_storage/user_info.dart';
+import 'api_endpoint.dart';
 
 class ApiClient {
   final String baseUrl;
@@ -40,17 +45,126 @@ class ApiClient {
     };
   }
 
+  bool _isAuthEndpoint(String endpoint) {
+    return endpoint.contains('/auth/login/') ||
+           endpoint.contains('/auth/refresh/') ||
+           endpoint.contains('/auth/google/') ||
+           endpoint.contains('/auth/apple/') ||
+           endpoint.contains('/auth/register/') ||
+           endpoint.contains('/auth/verify-otp/');
+  }
+
+  // ─── Token Refresh on 401 ─────────────────────────────────────────
+  static Completer<bool>? _refreshCompleter;
+
+  static Future<bool> refreshToken({
+    http.Client? client,
+    String baseUrl = ApiEndpoint.baseUrl,
+  }) async {
+    if (_refreshCompleter != null) {
+      return await _refreshCompleter!.future;
+    }
+
+    final completer = Completer<bool>();
+    _refreshCompleter = completer;
+
+    final httpClient = client ?? http.Client();
+    try {
+      final refresh = UserInfo.getRefreshTokenSync();
+      if (refresh == null || refresh.isEmpty) {
+        print('⚠️ [AUTH REFRESH] No refresh token found');
+        await _onSessionExpired();
+        completer.complete(false);
+        _refreshCompleter = null;
+        return false;
+      }
+
+      final base = baseUrl.endsWith('/')
+          ? baseUrl.substring(0, baseUrl.length - 1)
+          : baseUrl;
+      final refreshUrl = Uri.parse('$base/auth/refresh/');
+      print('🔄 [AUTH REFRESH] Calling $refreshUrl ...');
+
+      final res = await httpClient.post(
+        refreshUrl,
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({'refresh': refresh}),
+      );
+
+      print('🔄 [AUTH REFRESH] Status: ${res.statusCode}');
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final data = jsonDecode(res.body);
+        final newAccess = data['access']?.toString();
+        final newRefresh = data['refresh']?.toString();
+
+        if (newAccess != null && newAccess.isNotEmpty) {
+          await UserInfo.setAccessToken(newAccess);
+        }
+        if (newRefresh != null && newRefresh.isNotEmpty) {
+          await UserInfo.setRefreshToken(newRefresh);
+        }
+        print('✅ [AUTH REFRESH] Success — access and refresh tokens rotated');
+        completer.complete(true);
+        _refreshCompleter = null;
+        return true;
+      } else {
+        print('❌ [AUTH REFRESH] Refresh failed: ${res.body}');
+        await _onSessionExpired();
+        completer.complete(false);
+        _refreshCompleter = null;
+        return false;
+      }
+    } catch (e) {
+      print('❌ [AUTH REFRESH] Exception during refresh: $e');
+      await _onSessionExpired();
+      completer.complete(false);
+      _refreshCompleter = null;
+      return false;
+    }
+  }
+
+  static Future<void> _onSessionExpired() async {
+    await UserInfo.clearAll();
+    try {
+      if (Get.currentRoute != RouteName.signin) {
+        Get.offAllNamed(RouteName.signin);
+        Get.snackbar(
+          'Session Expired',
+          'Your session has expired. Please sign in again.',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: const Color(0xFFEF5350),
+          colorText: Colors.white,
+        );
+      }
+    } catch (_) {}
+  }
+
   // ─── GET ──────────────────────────────────────────────────────────
   Future<dynamic> get(
       String endpoint, {
         Map<String, String>? headers,
-        bool requiresAuth = true, Map<String, String?>? queryParameters,
+        bool requiresAuth = true,
+        Map<String, String?>? queryParameters,
       }) async {
     final url = Uri.parse(_buildUrl(endpoint));
     final baseHeaders = requiresAuth ? _authHeaders() : {..._defaultHeaders};
     final mergedHeaders = {...baseHeaders, ...?headers};
     _logRequest("GET", url, mergedHeaders, null);
     final response = await _httpClient.get(url, headers: mergedHeaders);
+
+    if (response.statusCode == 401 && requiresAuth && !_isAuthEndpoint(endpoint)) {
+      final refreshed = await refreshToken(client: _httpClient, baseUrl: baseUrl);
+      if (refreshed) {
+        final newHeaders = {..._authHeaders(), ...?headers};
+        _logRequest("GET (RETRY)", url, newHeaders, null);
+        final retryResponse = await _httpClient.get(url, headers: newHeaders);
+        return _handleResponse(retryResponse, url, method: "GET");
+      }
+    }
+
     return _handleResponse(response, url, method: "GET");
   }
 
@@ -67,6 +181,17 @@ class ApiClient {
     final encodedBody = body != null ? jsonEncode(body) : null;
     _logRequest("POST", url, mergedHeaders, body);
     final response = await _httpClient.post(url, headers: mergedHeaders, body: encodedBody);
+
+    if (response.statusCode == 401 && requiresAuth && !_isAuthEndpoint(endpoint)) {
+      final refreshed = await refreshToken(client: _httpClient, baseUrl: baseUrl);
+      if (refreshed) {
+        final newHeaders = {..._authHeaders(), ...?headers};
+        _logRequest("POST (RETRY)", url, newHeaders, body);
+        final retryResponse = await _httpClient.post(url, headers: newHeaders, body: encodedBody);
+        return _handleResponse(retryResponse, url, method: "POST");
+      }
+    }
+
     return _handleResponse(response, url, method: "POST");
   }
 
@@ -83,6 +208,17 @@ class ApiClient {
     final encodedBody = body != null ? jsonEncode(body) : null;
     _logRequest("PUT", url, mergedHeaders, body);
     final response = await _httpClient.put(url, headers: mergedHeaders, body: encodedBody);
+
+    if (response.statusCode == 401 && requiresAuth && !_isAuthEndpoint(endpoint)) {
+      final refreshed = await refreshToken(client: _httpClient, baseUrl: baseUrl);
+      if (refreshed) {
+        final newHeaders = {..._authHeaders(), ...?headers};
+        _logRequest("PUT (RETRY)", url, newHeaders, body);
+        final retryResponse = await _httpClient.put(url, headers: newHeaders, body: encodedBody);
+        return _handleResponse(retryResponse, url, method: "PUT");
+      }
+    }
+
     return _handleResponse(response, url, method: "PUT");
   }
 
@@ -99,6 +235,17 @@ class ApiClient {
     final encodedBody = body != null ? jsonEncode(body) : null;
     _logRequest("PATCH", url, mergedHeaders, body);
     final response = await _httpClient.patch(url, headers: mergedHeaders, body: encodedBody);
+
+    if (response.statusCode == 401 && requiresAuth && !_isAuthEndpoint(endpoint)) {
+      final refreshed = await refreshToken(client: _httpClient, baseUrl: baseUrl);
+      if (refreshed) {
+        final newHeaders = {..._authHeaders(), ...?headers};
+        _logRequest("PATCH (RETRY)", url, newHeaders, body);
+        final retryResponse = await _httpClient.patch(url, headers: newHeaders, body: encodedBody);
+        return _handleResponse(retryResponse, url, method: "PATCH");
+      }
+    }
+
     return _handleResponse(response, url, method: "PATCH");
   }
 
@@ -115,6 +262,17 @@ class ApiClient {
     final encodedBody = body != null ? jsonEncode(body) : null;
     _logRequest("DELETE", url, mergedHeaders, body);
     final response = await _httpClient.delete(url, headers: mergedHeaders, body: encodedBody);
+
+    if (response.statusCode == 401 && requiresAuth && !_isAuthEndpoint(endpoint)) {
+      final refreshed = await refreshToken(client: _httpClient, baseUrl: baseUrl);
+      if (refreshed) {
+        final newHeaders = {..._authHeaders(), ...?headers};
+        _logRequest("DELETE (RETRY)", url, newHeaders, body);
+        final retryResponse = await _httpClient.delete(url, headers: newHeaders, body: encodedBody);
+        return _handleResponse(retryResponse, url, method: "DELETE");
+      }
+    }
+
     return _handleResponse(response, url, method: "DELETE");
   }
 
@@ -145,6 +303,20 @@ class ApiClient {
     print("📎 Files: ${files?.keys.toList()}");
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 401 && requiresAuth && !_isAuthEndpoint(endpoint)) {
+      final refreshed = await refreshToken(client: _httpClient, baseUrl: baseUrl);
+      if (refreshed) {
+        return multipart(
+          endpoint,
+          method: method,
+          fields: fields,
+          files: files,
+          requiresAuth: requiresAuth,
+        );
+      }
+    }
+
     return _handleResponse(response, url, method: "$method MULTIPART");
   }
 
@@ -174,6 +346,8 @@ class ApiClient {
       if (errorBody is Map<String, dynamic>) {
         if (errorBody.containsKey('detail')) {
           errorMessage = errorBody['detail'].toString();
+        } else if (errorBody.containsKey('error')) {
+          errorMessage = errorBody['error'].toString();
         } else {
           errorMessage = errorBody.entries.map((e) {
             final val = e.value;
@@ -200,6 +374,10 @@ class ApiClient {
         throw ForbiddenException(uri: url, body: response.body);
       case 404:
         throw NotFoundException(uri: url, body: response.body);
+      case 409:
+        throw ConflictException(uri: url, body: response.body, message: errorMessage);
+      case 429:
+        throw ThrottleException(uri: url, body: response.body, message: errorMessage);
       case 500:
       case 502:
       case 503:
@@ -256,6 +434,24 @@ class ForbiddenException extends HttpException {
       : super(
       message: "Access denied.",
       statusCode: 403,
+      uri: uri,
+      body: body);
+}
+
+class ConflictException extends HttpException {
+  ConflictException({required Uri uri, String? body, String message = "Conflict / in-flight operation."})
+      : super(
+      message: message,
+      statusCode: 409,
+      uri: uri,
+      body: body);
+}
+
+class ThrottleException extends HttpException {
+  ThrottleException({required Uri uri, String? body, String message = "Too many requests. Please try again later."})
+      : super(
+      message: message,
+      statusCode: 429,
       uri: uri,
       body: body);
 }

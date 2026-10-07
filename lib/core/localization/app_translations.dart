@@ -142,6 +142,8 @@ class AppTranslations extends Translations {
     'submit_request': 'Submit Request',
     'location_required': 'Location Required',
     'location_required_msg': 'Location permission is required to submit a request.',
+    'photo_required': 'Photo Required',
+    'photo_required_msg': 'Please upload at least one photo of the issue for AI analysis.',
 
     // ── AI Analysis & Confirmation ────────────────────────────────
     'analyzing_issue': 'Analyzing Issue...',
@@ -273,6 +275,14 @@ class AppTranslations extends Translations {
     'additional_details': 'Additional Details (optional)',
     'submit_report': 'Submit Report',
     'report_submitted': 'Report submitted to support team.',
+
+    // ── Image Picker ──────────────────────────────────────────────
+    'take_photo': 'Take Photo',
+    'choose_gallery': 'Choose from Gallery',
+    'select_image_source': 'Select Image Source',
+    'camera_sub': 'Capture photo with camera',
+    'gallery_sub': 'Select photos from your device',
+    'tap_to_capture_upload': 'Tap to capture or upload',
   };
 
   static final Map<String, String> de = {
@@ -406,6 +416,8 @@ class AppTranslations extends Translations {
     'submit_request': 'Anfrage einreichen',
     'location_required': 'Standort erforderlich',
     'location_required_msg': 'Standortberechtigung ist erforderlich, um eine Anfrage einzureichen.',
+    'photo_required': 'Foto erforderlich',
+    'photo_required_msg': 'Bitte laden Sie mindestens ein Foto des Problems für die KI-Analyse hoch.',
 
     // ── AI Analysis & Confirmation ────────────────────────────────
     'analyzing_issue': 'Problem wird analysiert...',
@@ -537,5 +549,13 @@ class AppTranslations extends Translations {
     'additional_details': 'Zusätzliche Details (optional)',
     'submit_report': 'Meldung absenden',
     'report_submitted': 'Meldung wurde an das Support-Team gesendet.',
+
+    // ── Image Picker ──────────────────────────────────────────────
+    'take_photo': 'Foto aufnehmen',
+    'choose_gallery': 'Aus Galerie auswählen',
+    'select_image_source': 'Bildquelle auswählen',
+    'camera_sub': 'Foto mit der Kamera aufnehmen',
+    'gallery_sub': 'Fotos vom Gerät auswählen',
+    'tap_to_capture_upload': 'Tippen zum Aufnehmen oder Hochladen',
   };
 }

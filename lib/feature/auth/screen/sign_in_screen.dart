@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -49,26 +47,26 @@ class SignInScreen extends StatelessWidget {
               // ),
               SizedBox(height: 14.h),
 
-              // ── Continue with Apple ────────────────────────────
-              _buildSocialButton(
-                onTap: c.continueWithApple,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.apple, size: 22.sp, color: Colors.black),
-                    SizedBox(width: 10.w),
-                    Text(
-                      'Continue with Apple',
-                      style: TextStyle(
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF212121),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 24.h),
+              // // ── Continue with Apple ────────────────────────────
+              // _buildSocialButton(
+              //   onTap: c.continueWithApple,
+              //   child: Row(
+              //     mainAxisAlignment: MainAxisAlignment.center,
+              //     children: [
+              //       Icon(Icons.apple, size: 22.sp, color: Colors.black),
+              //       SizedBox(width: 10.w),
+              //       Text(
+              //         'Continue with Apple',
+              //         style: TextStyle(
+              //           fontSize: 15.sp,
+              //           fontWeight: FontWeight.w500,
+              //           color: const Color(0xFF212121),
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
+              // SizedBox(height: 24.h),
 
               // ── Email field ────────────────────────────────────
               CustomTextField(
@@ -80,22 +78,24 @@ class SignInScreen extends StatelessWidget {
               SizedBox(height: 14.h),
 
               // ── Password field ─────────────────────────────────
-              Obx(() => CustomTextField(
-                icon: Icons.lock_outline_rounded,
-                labelText: 'enter_password'.tr,
-                controller: c.passwordController,
-                obscureText: !c.isPasswordVisible.value,
-                suffixIcon: GestureDetector(
-                  onTap: c.togglePasswordVisibility,
-                  child: Icon(
-                    c.isPasswordVisible.value
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    color: const Color(0xFFBDBDBD),
-                    size: 20.sp,
+              Obx(
+                () => CustomTextField(
+                  icon: Icons.lock_outline_rounded,
+                  labelText: 'enter_password'.tr,
+                  controller: c.passwordController,
+                  obscureText: !c.isPasswordVisible.value,
+                  suffixIcon: GestureDetector(
+                    onTap: c.togglePasswordVisibility,
+                    child: Icon(
+                      c.isPasswordVisible.value
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: const Color(0xFFBDBDBD),
+                      size: 20.sp,
+                    ),
                   ),
                 ),
-              )),
+              ),
               SizedBox(height: 20.h),
 
               // ── Forgot Password ────────────────────────────────
@@ -112,37 +112,39 @@ class SignInScreen extends StatelessWidget {
               SizedBox(height: 20.h),
 
               // ── Sign In button ─────────────────────────────────
-              Obx(() => GestureDetector(
-                onTap: c.isLoading.value ? null : c.signIn,
-                child: Container(
-                  width: double.infinity,
-                  height: 54.h,
-                  decoration: BoxDecoration(
-                    color: c.isLoading.value
-                        ? const Color(0xFFF8C106).withOpacity(0.6)
-                        : const Color(0xFFF8C106),
-                    borderRadius: BorderRadius.circular(30.r),
-                  ),
-                  alignment: Alignment.center,
-                  child: c.isLoading.value
-                      ? SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2.5,
+              Obx(
+                () => GestureDetector(
+                  onTap: c.isLoading.value ? null : c.signIn,
+                  child: Container(
+                    width: double.infinity,
+                    height: 54.h,
+                    decoration: BoxDecoration(
+                      color: c.isLoading.value
+                          ? const Color(0xFFF8C106).withOpacity(0.6)
+                          : const Color(0xFFF8C106),
+                      borderRadius: BorderRadius.circular(30.r),
                     ),
-                  )
-                      : Text(
-                    'sign_in'.tr,
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
+                    alignment: Alignment.center,
+                    child: c.isLoading.value
+                        ? SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                        : Text(
+                            'sign_in'.tr,
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
-              )),
+              ),
               SizedBox(height: 28.h),
 
               // ── Sign Up link ───────────────────────────────────
@@ -152,7 +154,9 @@ class SignInScreen extends StatelessWidget {
                   Text(
                     'dont_have_account'.tr,
                     style: TextStyle(
-                        fontSize: 15.sp, color: const Color(0xFF9E9E9E)),
+                      fontSize: 15.sp,
+                      color: const Color(0xFF9E9E9E),
+                    ),
                   ),
                   GestureDetector(
                     onTap: c.goToSignUp,
@@ -184,8 +188,10 @@ class SignInScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSocialButton(
-      {required VoidCallback onTap, required Widget child}) {
+  Widget _buildSocialButton({
+    required VoidCallback onTap,
+    required Widget child,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -237,10 +243,8 @@ class SignInScreen extends StatelessWidget {
         style: TextStyle(fontSize: 14.sp, color: const Color(0xFF212121)),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle:
-          TextStyle(fontSize: 14.sp, color: const Color(0xFFBDBDBD)),
-          prefixIcon:
-          Icon(icon, color: const Color(0xFF9E9E9E), size: 20.sp),
+          hintStyle: TextStyle(fontSize: 14.sp, color: const Color(0xFFBDBDBD)),
+          prefixIcon: Icon(icon, color: const Color(0xFF9E9E9E), size: 20.sp),
           suffixIcon: suffixIcon,
           filled: true,
           fillColor: Colors.white,
@@ -254,10 +258,7 @@ class SignInScreen extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(30.r),
-            borderSide: const BorderSide(
-              color: Color(0xFFFFC107),
-              width: 1.5,
-            ),
+            borderSide: const BorderSide(color: Color(0xFFFFC107), width: 1.5),
           ),
           contentPadding: EdgeInsets.symmetric(vertical: 16.h),
         ),

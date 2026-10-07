@@ -12,6 +12,7 @@ class ApiEndpoint {
   static const String resetPassword  = "/auth/reset-password/";
   static const String profile        = "/auth/profile/";
   static const String logout         = "/auth/logout/";
+  static const String refresh        = "/auth/refresh/";
 
   //Customer
   static const String customerHomepage    = "/services/requests/customer/homepage/";
@@ -24,9 +25,6 @@ class ApiEndpoint {
   static const String createRequest      = '/services/requests/';
   static const String uploadMedia        = '/services/media/upload/';
 
-
-
-
   /// POST  /services/requests/{id}/send-offer/
   static String sendOffer(int requestId) =>
       "/services/requests/$requestId/send-offer/";
@@ -35,22 +33,20 @@ class ApiEndpoint {
   /// POST  body: { "request_id": N }
   static const String aiProcess = "/ai/process/";
 
+  /// POST  /services/requests/{id}/start-ai/
+  static String startAi(int requestId) =>
+      "/services/requests/$requestId/start-ai/";
+
   /// GET   /ai/result/{id}/   — poll until is_finished == true
   static const String aiResult  = "/ai/result/";
-
 
   // ─── Provider ──────────────────────────────────────────────────────
   static const String proHomepage        = "/services/requests/pro/homepage/";
   static const String servicesList = '/services/list/';
 
-
   static String interestedProviders(int id) => '/services/requests/$id/interested-providers/';
   static String hireProvider(int id) => '/services/requests/$id/hire-provider/';
   static String submitReview(int id) => '/services/requests/$id/submit-review/';
-
-  // lib/core/endpoint/api_endpoint.dart
-
-
 
   // ── Professional Request Endpoints ────────────────────────────────
   static const String proActiveRequests = '/services/requests/pro/active/';
@@ -59,14 +55,20 @@ class ApiEndpoint {
   static const String proNewRequests = '/services/requests/pro/new/';
   static String proRequestRespond(int id) => '/services/requests/$id/respond/';
 
-
   static const String proRequests        = "/services/requests/pro/requests/";
   static const String providerOnboarding = "/pro/onboarding/";
+  static const String submitForReview    = "/pro/onboarding/submit-for-review/";
   static const String activateSubscription = "/pro/subscription/activate/";
   static String proAdvanceStatus(int id)   => '/services/requests/$id/advance-status/';
   static String proSubmitBill(int id)      => '/services/requests/$id/submit-bill/';
   static String chatMessages(int id) => '/services/requests/$id/messages/';
-  static String chatWebSocket(int id) => 'ws://handyapi.dsrt321.online/ws/chat/$id/';
+  static String chatWebSocket(int id) {
+    final wsBase = baseUrl
+        .replaceFirst('https://', 'wss://')
+        .replaceFirst('http://', 'ws://')
+        .replaceFirst(RegExp(r'/api/?$'), '');
+    return '$wsBase/ws/chat/$id/';
+  }
   static const String allRequests = '/services/requests/';
   // ── Provider Details & Invite ─────────────────────────────────────
   static String providerDetails(int id) => '/services/providers/$id/';

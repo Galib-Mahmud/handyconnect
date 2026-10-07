@@ -191,7 +191,10 @@ class ProfessionalChatController extends GetxController {
     print('🔌 [WS] → $wsUri');
 
     try {
-      _channel = WebSocketChannel.connect(wsUri);
+      _channel = WebSocketChannel.connect(
+        wsUri,
+        protocols: ['bearer', token],
+      );
 
       // ✅ Handshake success = connected. Set isConnected HERE.
       _channel!.ready.then((_) {
@@ -271,12 +274,22 @@ class ProfessionalChatController extends GetxController {
     _retryCount++;
     final delay = Duration(seconds: (_retryCount * 2).clamp(2, 30));
     print('🔄 [WS] Retry #$_retryCount in ${delay.inSeconds}s');
-    Future.delayed(delay, () { if (!_disposed) _connectWebSocket(); });
+    Future.delayed(delay, () async {
+      if (!_disposed) {
+        // Attempt token refresh on WS auth close/disconnect before reconnecting
+        await ApiClient.refreshToken();
+        _connectWebSocket();
+      }
+    });
   }
 
   void sendMessage() {
-    final text = textController.text.trim();
+    String text = textController.text.trim();
     if (text.isEmpty) return;
+    // Cap to 2000 characters per backend spec
+    if (text.length > 2000) {
+      text = text.substring(0, 2000);
+    }
     print('🔍 [CHAT] sendMessage — requestId=$requestId  isConnected=${isConnected.value}');
 
     final now  = TimeOfDay.now();

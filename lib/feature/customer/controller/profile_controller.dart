@@ -168,9 +168,6 @@ class ProfileController extends GetxController {
     Get.back(); // close dialog
     try {
       await _apiClient.delete(ApiEndpoint.deleteAccount, requiresAuth: true);
-    } catch (e) {
-      print('⚠️ Delete account API call notice: $e');
-    } finally {
       await UserInfo.clearAll();
       Get.offAllNamed(RouteName.signin);
       Get.snackbar(
@@ -179,6 +176,24 @@ class ProfileController extends GetxController {
         snackPosition: SnackPosition.TOP,
         backgroundColor: const Color(0xFFF8C106),
         colorText: Colors.black,
+      );
+    } on HttpException catch (e) {
+      print('❌ Delete account failed: ${e.message}');
+      Get.snackbar(
+        'Error',
+        e.message,
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFFEF5350),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      print('❌ Delete account error: $e');
+      Get.snackbar(
+        'Error',
+        'Could not delete account. Please try again.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFFEF5350),
+        colorText: Colors.white,
       );
     }
   }

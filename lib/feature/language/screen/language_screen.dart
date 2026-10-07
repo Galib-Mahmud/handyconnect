@@ -23,14 +23,14 @@ class LanguageScreen extends StatelessWidget {
           icon: Icon(Icons.arrow_back, color: const Color(0xFF212121), size: 22.sp),
           onPressed: () => Get.back(),
         ),
-        title: Obx(() => Text(
-              'language'.tr,
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF212121),
-              ),
-            )),
+        title: Text(
+          'language'.tr,
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF212121),
+          ),
+        ),
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(1.h),
           child: Container(color: const Color(0xFFEEEEEE), height: 1.h),
@@ -43,23 +43,23 @@ class LanguageScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Header Text ──────────────────────────────────────────
-              Obx(() => Text(
-                    'select_language'.tr,
-                    style: TextStyle(
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF212121),
-                    ),
-                  )),
+              Text(
+                'select_language'.tr,
+                style: TextStyle(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF212121),
+                ),
+              ),
               SizedBox(height: 6.h),
-              Obx(() => Text(
-                    'choose_preferred_language'.tr,
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      color: const Color(0xFF757575),
-                      fontWeight: FontWeight.w400,
-                    ),
-                  )),
+              Text(
+                'choose_preferred_language'.tr,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: const Color(0xFF757575),
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
               SizedBox(height: 24.h),
 
               // ── Language Options Cards ─────────────────────────────
@@ -97,15 +97,15 @@ class LanguageScreen extends StatelessWidget {
                     ),
                     SizedBox(width: 12.w),
                     Expanded(
-                      child: Obx(() => Text(
-                            'language_note'.tr,
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: const Color(0xFF7A5A00),
-                              height: 1.45,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          )),
+                      child: Text(
+                        'language_note'.tr,
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          color: const Color(0xFF7A5A00),
+                          height: 1.45,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ],
                 ),

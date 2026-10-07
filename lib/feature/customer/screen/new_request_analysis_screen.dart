@@ -40,8 +40,8 @@ class _NewRequestAnalysisScreenState extends State<NewRequestAnalysisScreen> {
 
     print('🔬 [ANALYSIS] Starting for request ID: $_requestId');
 
-    // Wait 7 seconds then call /ai/process/
-    _processTimer = Timer(const Duration(seconds: 5), _startAiProcess);
+    // Start AI analysis after brief delay for smooth transition
+    _processTimer = Timer(const Duration(milliseconds: 600), _startAiProcess);
   }
 
   @override
@@ -52,31 +52,68 @@ class _NewRequestAnalysisScreenState extends State<NewRequestAnalysisScreen> {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // Step 3 — POST /ai/process/
+  // Step 3 — POST /services/requests/{id}/start-ai/
   // ─────────────────────────────────────────────────────────────────
-  Future<void> _startAiProcess() async {
+  Future<void> _startAiProcess({bool isRetry = false}) async {
     if (!mounted) return;
 
     try {
-      print('🤖 [AI PROCESS] Calling /ai/process/ for request $_requestId...');
+      print('🤖 [AI PROCESS] Starting AI for request $_requestId (retry: $isRetry)...');
 
       setState(() {
-        _statusText = 'AI Scanning...';
-        _subText    = 'Detecting the issue in your images';
+        _hasError   = false;
+        _statusText = 'ai_scanning'.tr;
+        _subText    = 'ai_detecting'.tr;
       });
 
       await _apiClient.post(
-        ApiEndpoint.aiProcess,
-        body: {'request_id': _requestId},
+        ApiEndpoint.startAi(_requestId),
+        body: isRetry ? {'retry': true} : {},
       );
 
       print('✅ [AI PROCESS] Scanning started');
+    } on ConflictException {
+      print('ℹ️ [AI PROCESS] Analysis already in-flight (409), polling...');
+    } on ThrottleException {
+      print('⚠️ [AI PROCESS] Throttled (429)');
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _statusText = 'Too Many Requests';
+          _subText = 'Please wait a moment before trying again.';
+        });
+      }
+      return;
+    } on HttpException catch (e) {
+      if (e.statusCode == 409) {
+        print('ℹ️ [AI PROCESS] 409 in-flight, polling...');
+      } else if (e.statusCode == 400) {
+        final msg = e.message.toLowerCase();
+        // If the request was already published/listed, redirect to sent screen smoothly
+        if (msg.contains('only available before') || msg.contains('already') || msg.contains('listed')) {
+          print('ℹ️ [AI PROCESS] Request is already listed. Navigating to sent screen.');
+          if (mounted) {
+            Get.offNamed(
+              RouteName.applicationSent,
+              arguments: {'request_id': _requestId},
+            );
+          }
+          return;
+        }
+        if (mounted) {
+          setState(() {
+            _hasError = true;
+            _statusText = 'Analysis Error';
+            _subText = e.message;
+          });
+        }
+        return;
+      }
     } catch (e) {
-      // Non-fatal: still start polling regardless
       print('⚠️ [AI PROCESS] Error (still polling): $e');
     }
 
-    // Start polling /ai/result/{id}/ every 3 seconds
+    // Start polling /ai/result/{id}/
     _startPolling();
   }
 
@@ -84,9 +121,15 @@ class _NewRequestAnalysisScreenState extends State<NewRequestAnalysisScreen> {
   // Step 4 — GET /ai/result/{id}/  poll every 3s
   // ─────────────────────────────────────────────────────────────────
   void _startPolling() {
-    // Prothome 10 seconds wait korbe, tarpor proti 10s por por check korbe
-    _pollTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       _checkResult();
+    });
+    // Check first result after 2 seconds
+    Timer(const Duration(seconds: 2), () {
+      if (mounted && (_pollTimer?.isActive ?? false)) {
+        _checkResult();
+      }
     });
   }
 
@@ -109,11 +152,15 @@ class _NewRequestAnalysisScreenState extends State<NewRequestAnalysisScreen> {
         _pollTimer?.cancel();
         if (!mounted) return;
 
+        final Map<String, dynamic> resultData = response['data'] is Map
+            ? Map<String, dynamic>.from(response['data'])
+            : Map<String, dynamic>.from(response is Map ? response : {});
+
         Get.offNamed(
-             RouteName.confirmReq,
+          RouteName.confirmReq,
           arguments: {
             'request_id' : _requestId,
-            'result_data': Map<String, dynamic>.from(response['data'] ?? {}),
+            'result_data': resultData,
           },
         );
 
@@ -122,8 +169,8 @@ class _NewRequestAnalysisScreenState extends State<NewRequestAnalysisScreen> {
         if (mounted) {
           setState(() {
             _hasError   = true;
-            _statusText = 'Analysis Failed';
-            _subText    = response['message']?.toString() ?? 'Something went wrong.';
+            _statusText = 'analysis_failed'.tr;
+            _subText    = response['message']?.toString() ?? 'something_went_wrong'.tr;
           });
         }
       } else {
@@ -228,27 +275,52 @@ class _NewRequestAnalysisScreenState extends State<NewRequestAnalysisScreen> {
                             fontSize: 14.sp, color: const Color(0xFF9E9E9E)),
                       ),
 
-                      // Go Back button on error
+                      // Action buttons on error
                       if (_hasError) ...[
                         SizedBox(height: 24.h),
-                        GestureDetector(
-                          onTap: () => Get.back(),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 32.w, vertical: 12.h),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8C106),
-                              borderRadius: BorderRadius.circular(24.r),
-                            ),
-                            child: Text(
-                              'go_back'.tr,
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            GestureDetector(
+                              onTap: () => _startAiProcess(isRetry: true),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 24.w, vertical: 12.h),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8C106),
+                                  borderRadius: BorderRadius.circular(24.r),
+                                ),
+                                child: Text(
+                                  'retry'.tr,
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                            SizedBox(width: 12.w),
+                            GestureDetector(
+                              onTap: () => Get.back(),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 24.w, vertical: 12.h),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0F0F0),
+                                  borderRadius: BorderRadius.circular(24.r),
+                                ),
+                                child: Text(
+                                  'go_back'.tr,
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF212121),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ],

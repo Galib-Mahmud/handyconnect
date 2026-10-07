@@ -17,19 +17,19 @@ class OnboardingController extends GetxController {
   static OnboardingController get to =>
       Get.put(OnboardingController(), permanent: true);
 
-  final ApiClient   _apiClient = ApiClient(baseUrl: ApiEndpoint.baseUrl);
-  final ImagePicker _picker    = ImagePicker();
+  final ApiClient _apiClient = ApiClient(baseUrl: ApiEndpoint.baseUrl);
+  final ImagePicker _picker = ImagePicker();
 
   // ─────────────────────────────────────────────────────────────────
   // SCREEN 3 — Services fetched from API
   // ─────────────────────────────────────────────────────────────────
   final RxList<Map<String, dynamic>> availableServices =
       <Map<String, dynamic>>[].obs;
-  final RxSet<int>   selectedServiceIds = <int>{}.obs;
-  final RxBool       isLoadingServices  = false.obs;
-  final RxBool       isHourly           = true.obs;
-  final RxDouble     serviceRadius      = 15.0.obs;
-  final businessAddressController       = TextEditingController();
+  final RxSet<int> selectedServiceIds = <int>{}.obs;
+  final RxBool isLoadingServices = false.obs;
+  final RxBool isHourly = true.obs;
+  final RxDouble serviceRadius = 15.0.obs;
+  final businessAddressController = TextEditingController();
 
   Future<void> fetchServices() async {
     try {
@@ -37,8 +37,9 @@ class OnboardingController extends GetxController {
       print('📋 [SERVICES] Fetching...');
       final response = await _apiClient.get(ApiEndpoint.servicesList);
       final List<dynamic> list = response is List ? response : [];
-      availableServices.value =
-          list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      availableServices.value = list
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
       print('✅ [SERVICES] Loaded ${availableServices.length} services');
     } catch (e) {
       print('❌ [SERVICES] Failed: $e');
@@ -68,20 +69,20 @@ class OnboardingController extends GetxController {
   // SCREEN 2 — Document Upload
   // ─────────────────────────────────────────────────────────────────
   final Rx<File?> governmentIdFile = Rx<File?>(null);
-  final Rx<File?> certificateFile  = Rx<File?>(null);
+  final Rx<File?> certificateFile = Rx<File?>(null);
   final Rx<File?> profilePhotoFile = Rx<File?>(null);
 
   int get uploadedCount {
     int count = 0;
     if (governmentIdFile.value != null) count++;
-    if (certificateFile.value  != null) count++;
+    if (certificateFile.value != null) count++;
     if (profilePhotoFile.value != null) count++;
     return count;
   }
 
   bool validateDocuments() {
     if (governmentIdFile.value == null ||
-        certificateFile.value  == null ||
+        certificateFile.value == null ||
         profilePhotoFile.value == null) {
       _showError('Please upload all three documents before continuing.');
       return false;
@@ -101,7 +102,9 @@ class OnboardingController extends GetxController {
 
   Future<void> pickProfilePhoto() async {
     final xfile = await _picker.pickImage(
-        source: ImageSource.gallery, imageQuality: 85);
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
     if (xfile != null) profilePhotoFile.value = File(xfile.path);
   }
 
@@ -171,7 +174,7 @@ class OnboardingController extends GetxController {
       return;
     }
     if (governmentIdFile.value == null ||
-        certificateFile.value  == null ||
+        certificateFile.value == null ||
         profilePhotoFile.value == null) {
       _showError('Please upload all three documents.');
       return;
@@ -190,8 +193,7 @@ class OnboardingController extends GetxController {
       print('   radius   : ${serviceRadius.value.toInt()} km');
 
       // ── Build URL (plain string concatenation — no interpolation bug) ──
-      final String url =
-          ApiEndpoint.baseUrl + ApiEndpoint.providerOnboarding;
+      final String url = ApiEndpoint.baseUrl + ApiEndpoint.providerOnboarding;
       print('🌐 [ONBOARDING] URL: $url');
 
       // ── Auth token ────────────────────────────────────────────
@@ -199,48 +201,63 @@ class OnboardingController extends GetxController {
 
       // ── Dio instance ──────────────────────────────────────────
       final dio = Dio();
-      dio.options.headers = {
-        'Authorization': 'Bearer $token',
-      };
+      dio.options.headers = {'Authorization': 'Bearer $token'};
 
       // ── FormData — dio sends List as repeated keys ────────────
       // services: [4, 5]  →  services=4&services=5 (Django reads as list)
       final formData = FormData.fromMap({
-        'business_address' : businessAddressController.text.trim(),
-        'service_radius'   : serviceRadius.value.toInt(),
-        'onboarding_status': 'UNDER_REVIEW',
-        'lat'              : pos.latitude.toString(),
-        'lng'              : pos.longitude.toString(),
-        'services'         : selectedServiceIds.toList(),
+        'business_address': businessAddressController.text.trim(),
+        'service_radius': serviceRadius.value.toInt(),
+        'lat': pos.latitude.toString(),
+        'lng': pos.longitude.toString(),
+        'services': selectedServiceIds.toList(),
       });
 
       // ── Attach files ──────────────────────────────────────────
       formData.files.addAll([
-        MapEntry('government_id',
-            await MultipartFile.fromFile(governmentIdFile.value!.path)),
-        MapEntry('professional_certificate',
-            await MultipartFile.fromFile(certificateFile.value!.path)),
-        MapEntry('profile_photo',
-            await MultipartFile.fromFile(profilePhotoFile.value!.path)),
+        MapEntry(
+          'government_id',
+          await MultipartFile.fromFile(governmentIdFile.value!.path),
+        ),
+        MapEntry(
+          'professional_certificate',
+          await MultipartFile.fromFile(certificateFile.value!.path),
+        ),
+        MapEntry(
+          'profile_photo',
+          await MultipartFile.fromFile(profilePhotoFile.value!.path),
+        ),
       ]);
 
-      // ── PATCH request ─────────────────────────────────────────
+      // ── PATCH request (profile & details) ───────────────────────
       final dioResponse = await dio.patch(url, data: formData);
-      final response    = dioResponse.data;
+      final response = dioResponse.data;
 
-      print('✅ [ONBOARDING] Response: $response');
+      print('✅ [ONBOARDING] Details saved: $response');
 
-      if (response != null) {
-        final status = response['onboarding_status']?.toString() ?? '';
-        if (status.isNotEmpty) {
-          await UserInfo.setOnboardingStatus(status);
-        }
+      // ── POST submit-for-review (HC-019 canonical review request) ──
+      final submitUrl = ApiEndpoint.baseUrl + ApiEndpoint.submitForReview;
+      print('🌐 [ONBOARDING] Submitting for review: $submitUrl');
+      final submitResponse = await dio.post(submitUrl);
+      print(
+        '✅ [ONBOARDING] Submit for review response: ${submitResponse.data}',
+      );
+
+      if (submitResponse.data != null) {
+        final status =
+            submitResponse.data['onboarding_status']?.toString() ??
+            'UNDER_REVIEW';
+        await UserInfo.setOnboardingStatus(status);
+      } else if (response != null) {
+        final status =
+            response['onboarding_status']?.toString() ?? 'UNDER_REVIEW';
+        await UserInfo.setOnboardingStatus(status);
       }
 
       _onboardingSubmitSuccess.value = true;
-
     } on DioException catch (e) {
-      final msg = e.response?.data?.toString() ?? e.message ?? 'Request failed.';
+      final msg =
+          e.response?.data?.toString() ?? e.message ?? 'Request failed.';
       print('❌ [ONBOARDING] DioException: $msg');
       _showError(msg);
     } catch (e) {
@@ -268,25 +285,27 @@ class OnboardingController extends GetxController {
   // Snackbars
   // ─────────────────────────────────────────────────────────────────
   void _showError(String message) => Get.snackbar(
-    'Error', message,
-    snackPosition   : SnackPosition.TOP,
-    backgroundColor : Colors.red.shade700,
-    colorText       : Colors.white,
-    icon            : const Icon(Icons.error_outline, color: Colors.white),
-    margin          : const EdgeInsets.all(12),
-    borderRadius    : 10,
-    duration        : const Duration(seconds: 5),
+    'Error',
+    message,
+    snackPosition: SnackPosition.TOP,
+    backgroundColor: Colors.red.shade700,
+    colorText: Colors.white,
+    icon: const Icon(Icons.error_outline, color: Colors.white),
+    margin: const EdgeInsets.all(12),
+    borderRadius: 10,
+    duration: const Duration(seconds: 5),
   );
 
   void _showSuccess(String message) => Get.snackbar(
-    'Success', message,
-    snackPosition   : SnackPosition.TOP,
-    backgroundColor : Colors.green.shade700,
-    colorText       : Colors.white,
-    icon            : const Icon(Icons.check_circle_outline, color: Colors.white),
-    margin          : const EdgeInsets.all(12),
-    borderRadius    : 10,
-    duration        : const Duration(seconds: 4),
+    'Success',
+    message,
+    snackPosition: SnackPosition.TOP,
+    backgroundColor: Colors.green.shade700,
+    colorText: Colors.white,
+    icon: const Icon(Icons.check_circle_outline, color: Colors.white),
+    margin: const EdgeInsets.all(12),
+    borderRadius: 10,
+    duration: const Duration(seconds: 4),
   );
 
   @override

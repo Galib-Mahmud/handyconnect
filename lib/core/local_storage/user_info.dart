@@ -24,6 +24,7 @@ class UserInfo {
   static Future<void> setRefreshToken(String token) async =>
       await _p.setString('refresh', token);
   static Future<String?> getRefreshToken() async => _p.getString('refresh');
+  static String? getRefreshTokenSync() => _p.getString('refresh');
   // ======= Provider ID (logged-in professional's own id) ======= //
   static Future<void> setProviderId(int id) async =>
       await _p.setInt('provider_id', id);

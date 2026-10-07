@@ -438,7 +438,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
   // ───────────────────── Upload Area ─────────────────────────────────
   Widget _buildUploadArea(RequestController ctrl) {
     return GestureDetector(
-      onTap: () => ctrl.pickImages(),
+      onTap: () => _showImageSourcePicker(ctrl),
       child: CustomPaint(
         painter: _DashedBorderPainter(
           color: _yellow,
@@ -464,7 +464,7 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
               ),
               SizedBox(height: 12.h),
               Text(
-                'Tap to capture or upload',
+                'tap_to_capture_upload'.tr,
                 style: TextStyle(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w600,
@@ -480,6 +480,110 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showImageSourcePicker(RequestController ctrl) {
+    Get.bottomSheet(
+      Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+        child: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 38.w,
+                  height: 4.h,
+                  margin: EdgeInsets.only(bottom: 16.h),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0E0E0),
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+                Text(
+                  'select_image_source'.tr,
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                    color: _ink,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8.w),
+                  leading: Container(
+                    width: 44.w,
+                    height: 44.w,
+                    decoration: BoxDecoration(
+                      color: _yellow.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.camera_alt_rounded,
+                        color: _yellow, size: 22.sp),
+                  ),
+                  title: Text(
+                    'take_photo'.tr,
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                      color: _ink,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'camera_sub'.tr,
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: _inkSoft,
+                    ),
+                  ),
+                  onTap: () {
+                    Get.back();
+                    ctrl.pickImageFromCamera();
+                  },
+                ),
+                SizedBox(height: 6.h),
+                ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8.w),
+                  leading: Container(
+                    width: 44.w,
+                    height: 44.w,
+                    decoration: BoxDecoration(
+                      color: _yellow.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.photo_library_rounded,
+                        color: _yellow, size: 22.sp),
+                  ),
+                  title: Text(
+                    'choose_gallery'.tr,
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                      color: _ink,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'gallery_sub'.tr,
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: _inkSoft,
+                    ),
+                  ),
+                  onTap: () {
+                    Get.back();
+                    ctrl.pickImagesFromGallery();
+                  },
+                ),
+                SizedBox(height: 10.h),
+              ],
+            ),
+          ),
+        ),
+      ),
+      isScrollControlled: true,
     );
   }
 

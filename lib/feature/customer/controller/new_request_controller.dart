@@ -26,26 +26,50 @@ class RequestController extends GetxController {
   double? _lng;
 
   // ─────────────────────────────────────────────────────────────────
-  // Image Picker
+  // Image Picker (Camera & Gallery)
   // ─────────────────────────────────────────────────────────────────
-  Future<void> pickImages() async {
+  Future<void> pickImageFromCamera() async {
+    final remaining = 5 - selectedImages.length;
+    if (remaining <= 0) {
+      Get.snackbar('Limit Reached', 'You can upload a maximum of 5 images.');
+      return;
+    }
+    try {
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+      );
+      if (photo != null) {
+        selectedImages.add(photo);
+      }
+    } catch (e) {
+      print('❌ [CAMERA] Error: $e');
+      Get.snackbar('Error', 'Could not access camera or capture photo.');
+    }
+  }
+
+  Future<void> pickImagesFromGallery() async {
+    final remaining = 5 - selectedImages.length;
+    if (remaining <= 0) {
+      Get.snackbar('Limit Reached', 'You can upload a maximum of 5 images.');
+      return;
+    }
     try {
       final List<XFile> picked = await _picker.pickMultiImage(
         imageQuality: 85,
-        limit: 5,
+        limit: remaining,
       );
       if (picked.isEmpty) return;
 
-      final remaining = 5 - selectedImages.length;
-      if (remaining <= 0) {
-        Get.snackbar('Limit Reached', 'You can upload a maximum of 5 images.');
-        return;
-      }
       selectedImages.addAll(picked.take(remaining));
     } catch (e) {
+      print('❌ [GALLERY] Error: $e');
       Get.snackbar('Error', 'Could not pick images.');
     }
   }
+
+  // Backward compatibility
+  Future<void> pickImages() => pickImagesFromGallery();
 
   void removeImage(int index) {
     if (index >= 0 && index < selectedImages.length) {
@@ -143,13 +167,15 @@ class RequestController extends GetxController {
   }) async {
     print('📤 [FINALIZE] PATCH /services/requests/$requestId/');
 
+    // NOTE: Do NOT send 'status': 'PENDING' here!
+    // The request must remain in DRAFT so the backend allows /start-ai/ scanning.
+    // Transition to PENDING happens when the user reviews AI diagnosis and confirms.
     final Map<String, dynamic> body = {
       'description'      : description.trim(),
       'address'          : address.trim(),
       'zip_code'         : zipCode.trim(),
       'no_call_just_chat': !canCall.value,
       'mark_as_priority' : isEmergency.value,
-      'status'           : 'PENDING',
       'lat'              : _lat,
       'lng'              : _lng,
     };
@@ -170,7 +196,7 @@ class RequestController extends GetxController {
 
   // ─────────────────────────────────────────────────────────────────
   // Main submit — requestId already exists (initialized from home)
-  // Flow: Location → Media upload → PATCH finalize → Navigate to AI
+  // Flow: Location → Media upload → PATCH draft → Navigate to AI
   // ─────────────────────────────────────────────────────────────────
   Future<void> submitRequest({
     required int    requestId,
@@ -181,15 +207,19 @@ class RequestController extends GetxController {
   }) async {
     // ── Validation ────────────────────────────────────────────────
     if (description.trim().isEmpty) {
-      Get.snackbar('Required', 'Please describe your problem.');
+      Get.snackbar('required'.tr, 'describe_problem_hint'.tr);
+      return;
+    }
+    if (selectedImages.isEmpty) {
+      Get.snackbar('photo_required'.tr, 'photo_required_msg'.tr);
       return;
     }
     if (address.trim().isEmpty) {
-      Get.snackbar('Required', 'Please enter your address.');
+      Get.snackbar('required'.tr, 'enter_address_hint'.tr);
       return;
     }
     if (zipCode.trim().isEmpty) {
-      Get.snackbar('Required', 'Please enter your zip code.');
+      Get.snackbar('required'.tr, 'zip_code'.tr);
       return;
     }
 
@@ -200,12 +230,10 @@ class RequestController extends GetxController {
       final bool locationOk = await _fetchLocation();
       if (!locationOk) return;
 
-      // ── Step 1: Upload media (if any) ──────────────────────────
-      if (selectedImages.isNotEmpty) {
-        await _uploadMediaFiles(requestId);
-      }
+      // ── Step 1: Upload media (required for AI analysis) ───────
+      await _uploadMediaFiles(requestId);
 
-      // ── Step 2: PATCH to PENDING ───────────────────────────────
+      // ── Step 2: PATCH details to draft (keeps status DRAFT) ───
       await _finalizeRequest(
         requestId  : requestId,
         description: description,
@@ -214,17 +242,17 @@ class RequestController extends GetxController {
         phoneNumber: phoneNumber,
       );
 
-      // ── Navigate to AI analysis ────────────────────────────────
+      // ── Step 3: Navigate to AI analysis ───────────────────────
       Get.toNamed(
         RouteName.newRequestAnalysis,
         arguments: {'request_id': requestId},
       );
     } on HttpException catch (e) {
       print('❌ [REQUEST] HttpException: ${e.message}');
-      Get.snackbar('Error', e.message);
+      Get.snackbar('error'.tr, e.message);
     } catch (e) {
       print('❌ [REQUEST] Error: $e');
-      Get.snackbar('Error', 'Something went wrong. Please try again.');
+      Get.snackbar('error'.tr, 'something_went_wrong'.tr);
     } finally {
       isLoading.value = false;
     }

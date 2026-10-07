@@ -163,7 +163,10 @@ class LocationTrackingController extends GetxController {
     );
 
     try {
-      _channel = WebSocketChannel.connect(uri);
+      _channel = WebSocketChannel.connect(
+        uri,
+        protocols: ['bearer', token],
+      );
       _wsSub = _channel!.stream.listen(
         _onWsMessage,
         onDone: _onWsClosed,

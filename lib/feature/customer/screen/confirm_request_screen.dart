@@ -31,18 +31,32 @@ class _ConfirmRequestScreenState extends State<ConfirmRequestScreen> {
     print('📋 [CONFIRM] Request $_requestId | data: $_resultData');
   }
 
-  // ── POST /services/requests/{id}/send-offer/ ──────────────────────
+  // ── Finalize & Publish Request ────────────────────────────────────
   Future<void> _submitRequest() async {
     setState(() => _isSending = true);
     try {
-      final response = await _apiClient.post(
-        ApiEndpoint.sendOffer(_requestId),
-        body: {},
-      );
+      dynamic response;
+      try {
+        response = await _apiClient.post(
+          ApiEndpoint.sendOffer(_requestId),
+          body: {},
+        );
+        print('✅ [CONFIRM] send-offer succeeded: $response');
+      } catch (e) {
+        print('ℹ️ [CONFIRM] send-offer note: $e, publishing via PATCH status: PENDING...');
+        response = await _apiClient.patch(
+          '${ApiEndpoint.createRequest}$_requestId/',
+          body: {'status': 'PENDING'},
+        );
+      }
 
       // ── Save request id for further use ──────────────────────────
-      final savedId = response?['id'] ?? response?['request_id'] ?? _requestId;
-      await UserInfo.setRequestId(savedId as int);
+      final savedId = (response is Map)
+          ? (response['id'] ?? response['request_id'] ?? _requestId)
+          : _requestId;
+      if (savedId is int) {
+        await UserInfo.setRequestId(savedId);
+      }
       print('✅ [CONFIRM] Request ID saved: $savedId');
 
       if (mounted) Get.toNamed(RouteName.applicationSent);
