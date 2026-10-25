@@ -3,27 +3,44 @@
 class ApiEndpoint {
   static const String baseUrl = 'https://api.vonabisz.de/api';
 
+  // ─── WebSocket helper ──────────────────────────────────────────────
+  /// Dart-e `wss://host/path` (port chhara) likhle Uri.port 0 hoye jay
+  /// ("https://host:0/..." error). Tai port explicitly set kora hoyeche.
+  static Uri _wsUri(String path, {Map<String, String>? query}) {
+    final base = Uri.parse(baseUrl);
+    final secure = base.scheme == 'https';
+    return Uri(
+      scheme: secure ? 'wss' : 'ws',
+      host: base.host,
+      port: base.hasPort ? base.port : (secure ? 443 : 80),
+      path: path,
+      queryParameters: (query == null || query.isEmpty) ? null : query,
+    );
+  }
+
   // ─── Auth ──────────────────────────────────────────────────────────
-  static const String register       = "/auth/register/";
-  static const String verifyOtp      = "/auth/verify-otp/";
-  static const String login          = "/auth/login/";
+  static const String register = "/auth/register/";
+  static const String verifyOtp = "/auth/verify-otp/";
+  static const String login = "/auth/login/";
   static const String forgotPassword = "/auth/forgot-password/";
   static const String verifyResetOtp = "/auth/verify-reset-otp/";
-  static const String resetPassword  = "/auth/reset-password/";
-  static const String profile        = "/auth/profile/";
-  static const String logout         = "/auth/logout/";
-  static const String refresh        = "/auth/refresh/";
+  static const String resetPassword = "/auth/reset-password/";
+  static const String profile = "/auth/profile/";
+  static const String logout = "/auth/logout/";
+  static const String refresh = "/auth/refresh/";
 
   //Customer
-  static const String customerHomepage    = "/services/requests/customer/homepage/";
-  static const String allCustomerRequests = "/services/requests/customer/homepage/";
-  static const String notifications       = "/services/notifications/";
-  static const String recentRequests      = "/services/recent-requests/";
-  static const String provider            = "/services/providers/";
-  static const String requests            = "/services/requests/";
-  static const String initializeRequest  = '/services/requests/initialize/';
-  static const String createRequest      = '/services/requests/';
-  static const String uploadMedia        = '/services/media/upload/';
+  static const String customerHomepage =
+      "/services/requests/customer/homepage/";
+  static const String allCustomerRequests =
+      "/services/requests/customer/homepage/";
+  static const String notifications = "/services/notifications/";
+  static const String recentRequests = "/services/recent-requests/";
+  static const String provider = "/services/providers/";
+  static const String requests = "/services/requests/";
+  static const String initializeRequest = '/services/requests/initialize/';
+  static const String createRequest = '/services/requests/';
+  static const String uploadMedia = '/services/media/upload/';
 
   /// POST  /services/requests/{id}/send-offer/
   static String sendOffer(int requestId) =>
@@ -31,36 +48,40 @@ class ApiEndpoint {
 
   // ─── AI ────────────────────────────────────────────────────────────
   /// POST  body: { "request_id": N }
-  static const String aiProcess = "/ai/process/";
-
-  /// POST  /services/requests/{id}/start-ai/
+  // static const String aiProcess = "/ai/process/";
   static String startAi(int requestId) =>
-      "/services/requests/$requestId/start-ai/";
+      '/services/requests/$requestId/start-ai/';
 
   /// GET   /ai/result/{id}/   — poll until is_finished == true
-  static const String aiResult  = "/ai/result/";
+  static const String aiResult = "/ai/result/";
 
   // ─── Provider ──────────────────────────────────────────────────────
-  static const String proHomepage        = "/services/requests/pro/homepage/";
+  static const String proHomepage = "/services/requests/pro/homepage/";
   static const String servicesList = '/services/list/';
 
-  static String interestedProviders(int id) => '/services/requests/$id/interested-providers/';
+  static String interestedProviders(int id) =>
+      '/services/requests/$id/interested-providers/';
   static String hireProvider(int id) => '/services/requests/$id/hire-provider/';
   static String submitReview(int id) => '/services/requests/$id/submit-review/';
+  //   static String submitForReview = '/services/requests/submit-for-review/';
+
+  // lib/core/endpoint/api_endpoint.dart
 
   // ── Professional Request Endpoints ────────────────────────────────
   static const String proActiveRequests = '/services/requests/pro/active/';
   static const String proPrivateRequests = '/services/requests/pro/private/';
-  static const String proEmergencyRequests = '/services/requests/pro/emergency/';
+  static const String proEmergencyRequests =
+      '/services/requests/pro/emergency/';
   static const String proNewRequests = '/services/requests/pro/new/';
   static String proRequestRespond(int id) => '/services/requests/$id/respond/';
 
-  static const String proRequests        = "/services/requests/pro/requests/";
+  static const String proRequests = "/services/requests/pro/requests/";
   static const String providerOnboarding = "/pro/onboarding/";
-  static const String submitForReview    = "/pro/onboarding/submit-for-review/";
+  static const String submitForReview = "/pro/onboarding/submit-for-review/";
   static const String activateSubscription = "/pro/subscription/activate/";
-  static String proAdvanceStatus(int id)   => '/services/requests/$id/advance-status/';
-  static String proSubmitBill(int id)      => '/services/requests/$id/submit-bill/';
+  static String proAdvanceStatus(int id) =>
+      '/services/requests/$id/advance-status/';
+  static String proSubmitBill(int id) => '/services/requests/$id/submit-bill/';
   static String chatMessages(int id) => '/services/requests/$id/messages/';
   static String chatWebSocket(int id) {
     final wsBase = baseUrl
@@ -72,14 +93,14 @@ class ApiEndpoint {
   static const String allRequests = '/services/requests/';
   // ── Provider Details & Invite ─────────────────────────────────────
   static String providerDetails(int id) => '/services/providers/$id/';
-  static String inviteProvider(int id)  => '/services/providers/$id/invite/';
+  static String inviteProvider(int id) => '/services/providers/$id/invite/';
 
   // ── Miscellaneous & Account ───────────────────────────────────────
-  static const String deleteAccount   = '/services/delete-account/';
-  static const String support         = '/services/support/';
-  static const String addresses       = '/services/addresses/';
-  static const String toggleOnline    = '/services/requests/toggle-online/';
-  static const String proEarnings     = '/pro/earnings/';
+  static const String deleteAccount = '/services/delete-account/';
+  static const String support = '/services/support/';
+  static const String addresses = '/services/addresses/';
+  static const String toggleOnline = '/services/requests/toggle-online/';
+  static const String proEarnings = '/pro/earnings/';
 
   //Google
   static const String googleLogin = '/auth/google/';

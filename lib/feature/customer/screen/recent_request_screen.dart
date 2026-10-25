@@ -178,22 +178,63 @@ class _RequestCard extends StatelessWidget {
   const _RequestCard({required this.request});
   final RecentRequestModel request;
 
+  // Old-style icon keys that map to local assets (see RecentRequestModel.iconAsset)
+  static const _assetIconKeys = {
+    'water_drop',
+    'bolt',
+    'ac_unit',
+    'palette',
+    'local_shipping',
+    'eco',
+  };
+
   // Parse hex colour string → Color
   Color _hex(String hex) {
     final h = hex.replaceAll('#', '');
     return Color(int.parse('FF$h', radix: 16));
   }
 
+  /// API ekhon emoji pathay ("🚿", "🎨"); purono key hole asset dekhabo.
+  Widget _buildIcon() {
+    final icon = request.serviceIcon;
+
+    if (_assetIconKeys.contains(icon)) {
+      return Image.asset(
+        request.iconAsset,
+        width: 36.w,
+        height: 36.w,
+        fit: BoxFit.contain,
+      );
+    }
+
+    // Emoji (or any other text icon)
+    return SizedBox(
+      width: 36.w,
+      height: 36.w,
+      child: Center(
+        child: Text(
+          icon.isEmpty ? '🛠️' : icon,
+          style: TextStyle(fontSize: 28.sp),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // service_name is "" in the API — fall back to a capitalised icon name
+    // service_name empty hole icon theke fallback name
     final title = request.serviceName.isNotEmpty
         ? request.serviceName
         : _iconFallbackName(request.serviceIcon);
 
     return GestureDetector(
-      onTap: () => Get.to(() => const CustomerInProgressScreen(),
-          arguments: {'requestId': request.id}),
+      onTap: () {
+        print('➡️ [RECENT REQUESTS] open request id=${request.id}');
+        Get.to(
+              () => CustomerInProgressScreen(requestId: request.id),
+          arguments: {'requestId': request.id},
+        );
+      },
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 18.h),
         decoration: BoxDecoration(
@@ -211,12 +252,7 @@ class _RequestCard extends StatelessWidget {
         child: Row(
           children: [
             // Service icon
-            Image.asset(
-              request.iconAsset,
-              width: 36.w,
-              height: 36.w,
-              fit: BoxFit.contain,
-            ),
+            _buildIcon(),
             SizedBox(width: 14.w),
 
             // Title + display text
@@ -278,6 +314,8 @@ class _RequestCard extends StatelessWidget {
       'palette'        : 'Painting',
       'local_shipping' : 'Moving',
       'eco'            : 'Gardening',
+      '🚿'             : 'Plumbing',
+      '🎨'             : 'Painting',
     };
     return map[icon] ?? 'Service';
   }

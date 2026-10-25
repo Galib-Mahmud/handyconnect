@@ -2,6 +2,7 @@
 import 'package:VonAbisZ/feature/customer/screen/home_dashboard_screen.dart';
 import 'package:VonAbisZ/feature/customer/screen/my_request_screen.dart';
 import 'package:VonAbisZ/feature/customer/screen/profile_screen.dart';
+import 'package:VonAbisZ/feature/customer/screen/recent_request_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -26,7 +27,7 @@ class _MainScreen1State extends State<MainScreen> {
 
   final List<Widget> _pages = [
     HomeDashboardScreen(),
-    MyRequest(),
+    RecentRequestScreen(),
     ProfileScreen(),
   ];
 

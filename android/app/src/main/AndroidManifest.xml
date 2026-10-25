@@ -13,6 +13,12 @@
         android:label="VonAbisZ"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
+        <!-- Google Maps API key (google_maps_flutter) -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyAxxDn0Z1y8_iiu1jC4XJi-sIjV8Z-kz18"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

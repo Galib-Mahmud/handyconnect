@@ -15,7 +15,7 @@ class ActiveJobScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // ── Find controller registered by JobRequestsController ──────
-    final c = Get.find<ActiveJobController>();
+    final c = Get.put(ActiveJobController());
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),

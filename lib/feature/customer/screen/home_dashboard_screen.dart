@@ -439,8 +439,24 @@ class HomeDashboardScreen extends StatelessWidget {
     final icon      = item['service_icon'] ?? '';
     final colorHex  = item['service_color'] as String?;
 
+    // Request id (API-te 'id' ba 'request_id' hote pare)
+    final int? requestId =
+    int.tryParse('${item['id'] ?? item['request_id'] ?? ''}');
+
     return GestureDetector(
-      onTap: () => Get.to(() => const CustomerInProgressScreen()),
+      onTap: () {
+        if (requestId == null || requestId == 0) {
+          print('❌ [HOME] request id missing in item: $item');
+          Get.snackbar('Error', 'Request id not found.',
+              snackPosition: SnackPosition.BOTTOM);
+          return;
+        }
+        print('➡️ [HOME] open request id=$requestId');
+        Get.to(
+              () => CustomerInProgressScreen(requestId: requestId),
+          arguments: {'requestId': requestId},
+        );
+      },
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 16.h),
         decoration: BoxDecoration(

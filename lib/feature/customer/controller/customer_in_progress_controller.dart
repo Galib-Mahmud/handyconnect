@@ -63,14 +63,34 @@ class InProgressController extends GetxController {
   final RxBool   isSubmittingReview = false.obs;
   final RxBool   hasReviewed        = false.obs;
 
-  int    get requestId => UserInfo.getRequestIdSync() ?? 0;
-  String get _myName   => UserInfo.getFullNameSync() ?? '';
+  // ── Request id ───────────────────────────────────────────────────
+  // Set ONCE in onInit():
+  //   1) Get.arguments['requestId']  (Recent Request screen theke)
+  //   2) UserInfo saved id           (notun request create korar por)
+  late final int requestId;
+
+  /// Screen theke shoraasori pass kora id (sobcheye nirbhorjogyo).
+  final int? _initialRequestId;
+
+  InProgressController({int? requestId}) : _initialRequestId = requestId;
+
+  String get _myName => UserInfo.getFullNameSync() ?? '';
 
   Timer? _pollTimer;
 
   @override
   void onInit() {
     super.onInit();
+
+    final args = Get.arguments;
+    final int? argId = (args is Map && args['requestId'] is int)
+        ? args['requestId'] as int
+        : null;
+
+    requestId = _initialRequestId ?? argId ?? UserInfo.getRequestIdSync() ?? 0;
+    print('🆔 [IN-PROGRESS] requestId=$requestId '
+        '(ctor=$_initialRequestId, args=$argId, saved=${UserInfo.getRequestIdSync()})');
+
     fetchStatus();
     _pollTimer =
         Timer.periodic(const Duration(seconds: 15), (_) => fetchStatus());

@@ -3,19 +3,34 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../../core/local_storage/user_info.dart';
 import '../../../route/route_name.dart';
 import '../controller/customer_in_progress_controller.dart';
 import '../controller/location_tracking_controller.dart'; // adjust path if needed
 
 class CustomerInProgressScreen extends StatelessWidget {
-  const CustomerInProgressScreen({super.key});
+  const CustomerInProgressScreen({super.key, this.requestId});
+
+  final int? requestId;
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(InProgressController());
+    final args = Get.arguments;
+    final int id = requestId ??
+        ((args is Map && args['requestId'] is int)
+            ? args['requestId'] as int
+            : null) ??
+        UserInfo.getRequestIdSync() ??
+        0;
+
+    // Request-wise tag: purono instance reuse hoye id 0 thakar problem ar hobe na
+    final controller = Get.put(
+      InProgressController(requestId: id),
+      tag: 'inprogress_$id',
+    );
     final trackingController = Get.put(
-      LocationTrackingController(requestId: controller.requestId),
-      tag: 'tracking_${controller.requestId}',
+      LocationTrackingController(requestId: id),
+      tag: 'tracking_$id',
     );
 
     return Scaffold(
