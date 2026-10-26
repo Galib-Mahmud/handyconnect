@@ -275,6 +275,29 @@ class OnboardingController extends GetxController {
   bool get onboardingSubmitSuccess => _onboardingSubmitSuccess.value;
   void resetSubmitSuccess() => _onboardingSubmitSuccess.value = false;
 
+  // ─────────────────────────────────────────────────────────────────
+  // CHECK ONBOARDING STATUS
+  // GET /api/auth/provider/onboarding/status/
+  // ─────────────────────────────────────────────────────────────────
+  Future<String?> checkOnboardingStatus() async {
+    try {
+      final response = await _apiClient.get(ApiEndpoint.providerOnboardingStatus);
+      if (response != null && response is Map<String, dynamic>) {
+        final status = response['onboarding_status']?.toString() ?? response['status']?.toString();
+        if (status != null) {
+          await UserInfo.setOnboardingStatus(status);
+          if (status == 'APPROVED') {
+            Get.offAllNamed(RouteName.main1);
+          }
+          return status;
+        }
+      }
+    } catch (e) {
+      print('❌ [ONBOARDING_STATUS] Error: $e');
+    }
+    return null;
+  }
+
   Future<void> goToSignInAfterOnboarding() async {
     await UserInfo.clearAll();
     Get.offAllNamed(RouteName.signin);

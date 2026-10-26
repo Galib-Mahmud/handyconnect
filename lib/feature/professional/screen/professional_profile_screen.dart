@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
+import '../../../core/endpoint/api_endpoint.dart';
 import '../../../route/route_name.dart';
 import '../controller/professional_profile_controller.dart';
 
@@ -240,9 +241,7 @@ class _ProfileCard extends StatelessWidget {
     final photoUrl = pc.photo.value;
     String? fullPhoto;
     if (photoUrl.isNotEmpty) {
-      fullPhoto = photoUrl.startsWith('http')
-          ? photoUrl
-          : 'https://handyapi.dsrt321.online$photoUrl';
+      fullPhoto = ApiEndpoint.mediaUrl(photoUrl);
     }
 
     return Container(
@@ -896,7 +895,122 @@ class _RatingSection extends StatelessWidget {
             ],
           ),
         ),
+        SizedBox(height: 16.h),
+        Obx(() {
+          if (pc.isLoadingReviews.value && pc.receivedReviews.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: CircularProgressIndicator(color: Color(0xFFF8C106)),
+              ),
+            );
+          }
+          if (pc.receivedReviews.isEmpty) {
+            return Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(20.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(color: const Color(0xFFEEEEEE)),
+              ),
+              child: Center(
+                child: Text(
+                  'No reviews received yet.',
+                  style: TextStyle(fontSize: 13.sp, color: const Color(0xFF9E9E9E)),
+                ),
+              ),
+            );
+          }
+          return Column(
+            children: pc.receivedReviews.map((r) => _buildReviewCard(r)).toList(),
+          );
+        }),
       ],
+    );
+  }
+
+  Widget _buildReviewCard(ReceivedReviewModel r) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFFEEEEEE)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18.r,
+                backgroundColor: const Color(0xFFF8C106).withValues(alpha: 0.2),
+                backgroundImage: r.customerPhoto != null ? NetworkImage(r.customerPhoto!) : null,
+                child: r.customerPhoto == null
+                    ? Text(
+                        r.customerName.isNotEmpty ? r.customerName[0].toUpperCase() : 'C',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFB45309),
+                        ),
+                      )
+                    : null,
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      r.customerName,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF212121),
+                      ),
+                    ),
+                    if (r.createdAt.isNotEmpty)
+                      Text(
+                        r.createdAt,
+                        style: TextStyle(fontSize: 11.sp, color: const Color(0xFF9E9E9E)),
+                      ),
+                  ],
+                ),
+              ),
+              Row(
+                children: List.generate(5, (i) {
+                  return Icon(
+                    i < r.rating.round() ? Icons.star_rounded : Icons.star_border_rounded,
+                    color: const Color(0xFFF8C106),
+                    size: 16.sp,
+                  );
+                }),
+              ),
+            ],
+          ),
+          if (r.comment.isNotEmpty) ...[
+            SizedBox(height: 10.h),
+            Text(
+              r.comment,
+              style: TextStyle(
+                fontSize: 13.sp,
+                color: const Color(0xFF424242),
+                height: 1.4,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

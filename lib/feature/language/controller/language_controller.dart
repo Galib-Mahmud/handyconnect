@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../core/endpoint/api_client.dart';
+import '../../../core/endpoint/api_endpoint.dart';
 import '../../../core/local_storage/user_info.dart';
 
 class LanguageOption {
@@ -55,6 +57,21 @@ class LanguageController extends GetxController {
 
     final locale = code == 'de' ? const Locale('de', 'DE') : const Locale('en', 'US');
     await Get.updateLocale(locale);
+
+    // Sync preferred language to backend if user is logged in
+    final token = UserInfo.getAccessTokenSync();
+    if (token != null && token.isNotEmpty) {
+      try {
+        await ApiClient(baseUrl: ApiEndpoint.baseUrl).patch(
+          ApiEndpoint.authMe,
+          body: {'language': code},
+          requiresAuth: true,
+        );
+        print('✅ [LANGUAGE] Synced language ($code) to backend /api/auth/me/');
+      } catch (e) {
+        print('⚠️ [LANGUAGE] Failed to sync language to backend: $e');
+      }
+    }
 
     Get.snackbar(
       code == 'de' ? 'Sprache aktualisiert' : 'Language Updated',

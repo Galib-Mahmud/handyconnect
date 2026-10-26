@@ -24,27 +24,8 @@ class SignInScreen extends StatelessWidget {
 
               // ── Logo illustration ──────────────────────────────
               _buildLogo(),
-              SizedBox(height: 48.h),
-              //
-              // // ── Continue with Google ───────────────────────────
-              // _buildSocialButton(
-              //   onTap: c.continueWithGoogle,
-              //   child: Row(
-              //     mainAxisAlignment: MainAxisAlignment.center,
-              //     children: [
-              //       _GoogleIcon(),
-              //       SizedBox(width: 12.w),
-              //       Text(
-              //         'Continue with Google',
-              //         style: TextStyle(
-              //           fontSize: 15.sp,
-              //           fontWeight: FontWeight.w500,
-              //           color: const Color(0xFF212121),
-              //         ),
-              //       ),
-              //     ],
-              //   ),
-              // ),
+              SizedBox(height: 32.h),
+
               SizedBox(height: 14.h),
 
               // // ── Continue with Apple ────────────────────────────

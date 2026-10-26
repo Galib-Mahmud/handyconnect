@@ -27,11 +27,14 @@ class ProviderModel {
   });
 
   factory ProviderModel.fromJson(Map<String, dynamic> json) {
+    final rawPhoto = json['profile_photo'] as String?;
     return ProviderModel(
-      id          : json['id'] as int,
+      id          : (json['id'] as int?) ?? 0,
       fullName    : (json['full_name'] as String?) ?? 'Professional',
       categoryName: (json['category_name'] as String?) ?? '',
-      profilePhoto: json['profile_photo'] as String?,
+      profilePhoto: (rawPhoto != null && rawPhoto.isNotEmpty)
+          ? ApiEndpoint.mediaUrl(rawPhoto)
+          : null,
       zipCode     : json['zip_code'] as String?,
       isVerified  : (json['is_verified'] as bool?) ?? false,
       rating      : (json['rating'] as String?) ?? '0.00',
@@ -90,8 +93,9 @@ class ProviderDetailModel {
       fullName         : (json['full_name'] as String?) ?? 'Professional',
       email            : (json['email'] as String?) ?? '',
       bio              : (json['bio'] as String?) ?? '',
-      profilePhoto     : json['profile_photo'] as String?,
-      zipCode          : json['zip_code'] as String?,
+      profilePhoto     : (json['profile_photo'] as String?) != null && (json['profile_photo'] as String).isNotEmpty
+          ? ApiEndpoint.mediaUrl(json['profile_photo'] as String)
+          : null,
       isVerified       : (json['is_verified'] as bool?) ?? false,
       radiusKm         : (json['radius_km'] as num?)?.toInt() ?? 0,
       jobsCount        : (json['jobs_count'] as num?)?.toInt() ?? 0,
@@ -151,9 +155,11 @@ class DirectHireController extends GetxController {
       isLoadingProviders.value = true;
       errorMessage.value = '';
 
-      final endpoint = serviceId > 0
-          ? '${ApiEndpoint.provider}?service_id=$serviceId'
-          : ApiEndpoint.provider;
+      final endpoint = requestId > 0
+          ? ApiEndpoint.providersForRequest(requestId)
+          : (serviceId > 0
+              ? '${ApiEndpoint.provider}?service_id=$serviceId&page_size=50'
+              : '${ApiEndpoint.provider}?page_size=50');
 
       print('📡 [DIRECT HIRE] GET $endpoint');
 

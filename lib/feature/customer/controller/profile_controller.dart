@@ -120,6 +120,76 @@ class ProfileController extends GetxController {
   }
 
   // ─────────────────────────────────────────────────────────────────
+  // GET /api/auth/me/
+  // ─────────────────────────────────────────────────────────────────
+  Future<void> fetchCurrentUser() async {
+    try {
+      final res = await _apiClient.get(ApiEndpoint.authMe, requiresAuth: true);
+      if (res != null) {
+        if (res['full_name'] != null) {
+          userName.value = res['full_name'];
+          await UserInfo.setFullName(res['full_name']);
+        }
+        if (res['email'] != null) userEmail.value = res['email'];
+        if (res['phone_number'] != null) userPhone.value = res['phone_number'];
+        if (res['role'] != null) userRole.value = res['role'];
+      }
+    } catch (e) {
+      print('❌ fetchCurrentUser error: $e');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // PATCH /api/auth/me/
+  // Body: { "full_name": "...", "phone_number": "...", "language": "..." }
+  // ─────────────────────────────────────────────────────────────────
+  Future<bool> updateProfile({
+    String? fullName,
+    String? phoneNumber,
+    String? language,
+  }) async {
+    try {
+      isLoading.value = true;
+      final body = <String, dynamic>{
+        if (fullName != null && fullName.trim().isNotEmpty) 'full_name': fullName.trim(),
+        if (phoneNumber != null && phoneNumber.trim().isNotEmpty) 'phone_number': phoneNumber.trim(),
+        if (language != null && language.trim().isNotEmpty) 'language': language.trim(),
+      };
+
+      final res = await _apiClient.patch(
+        ApiEndpoint.authMe,
+        body: body,
+        requiresAuth: true,
+      );
+
+      if (res != null) {
+        if (res['full_name'] != null) {
+          userName.value = res['full_name'];
+          await UserInfo.setFullName(res['full_name']);
+        }
+        if (res['phone_number'] != null) userPhone.value = res['phone_number'];
+      }
+
+      Get.snackbar(
+        'Success',
+        'Profile updated successfully.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFFF8C106),
+        colorText: Colors.black,
+      );
+      return true;
+    } on HttpException catch (e) {
+      _showError(e.message);
+      return false;
+    } catch (e) {
+      _showError('Failed to update profile.');
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
   // LOGOUT
   // POST /auth/logout/
   // Body: { "refresh": "<refresh_token>" }

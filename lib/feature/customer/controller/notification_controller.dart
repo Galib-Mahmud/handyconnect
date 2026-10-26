@@ -23,6 +23,24 @@ class NotificationModel {
     this.serviceRequest,
   });
 
+  NotificationModel copyWith({
+    int? id,
+    String? title,
+    String? message,
+    bool? isRead,
+    int? serviceRequest,
+    String? time,
+  }) {
+    return NotificationModel(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      isRead: isRead ?? this.isRead,
+      serviceRequest: serviceRequest ?? this.serviceRequest,
+      time: time ?? this.time,
+    );
+  }
+
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
       id            : json['id'] as int,
@@ -43,6 +61,7 @@ class NotificationsController extends GetxController {
       <NotificationModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
+  final RxBool isMarkingRead = false.obs;
 
   // Unread badge count — useful for bottom nav badge
   int get unreadCount => notifications.where((n) => !n.isRead).length;
@@ -53,21 +72,20 @@ class NotificationsController extends GetxController {
     fetchNotifications();
   }
 
-  // ── Fetch  GET /services/notifications/ ───────────────────────────
+  // ── Fetch  GET /api/services/notifications/ ────────────────────────
   Future<void> fetchNotifications() async {
     try {
-      isLoading.value  = true;
+      isLoading.value = true;
       errorMessage.value = '';
       print('🔔 [NOTIFICATIONS] Fetching...');
 
       final res = await _apiClient.get(
-        ApiEndpoint.notifications, // → /services/notifications/
+        ApiEndpoint.notifications,
         requiresAuth: true,
       );
 
-      // Response is a bare List
       final List<dynamic> raw =
-      res is List ? res : (res['results'] as List? ?? []);
+          res is List ? res : (res['results'] as List? ?? []);
 
       notifications.assignAll(
         raw.map((e) => NotificationModel.fromJson(
@@ -87,6 +105,43 @@ class NotificationsController extends GetxController {
           snackPosition: SnackPosition.BOTTOM);
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  // ── POST /api/services/notifications/mark-all-read/ ───────────────
+  Future<void> markAllAsRead() async {
+    try {
+      isMarkingRead.value = true;
+      await _apiClient.post(
+        ApiEndpoint.notificationsMarkAllRead,
+        requiresAuth: true,
+      );
+      notifications.assignAll(
+        notifications.map((n) => n.copyWith(isRead: true)).toList(),
+      );
+      print('✅ [NOTIFICATIONS] All marked as read');
+    } catch (e) {
+      print('❌ [NOTIFICATIONS] markAllAsRead error: $e');
+    } finally {
+      isMarkingRead.value = false;
+    }
+  }
+
+  // ── POST /api/services/notifications/{id}/mark-read/ ──────────────
+  Future<void> markAsRead(int id) async {
+    try {
+      // Optimistically mark as read in local list
+      final index = notifications.indexWhere((n) => n.id == id);
+      if (index != -1 && !notifications[index].isRead) {
+        notifications[index] = notifications[index].copyWith(isRead: true);
+        await _apiClient.post(
+          ApiEndpoint.notificationMarkRead(id),
+          requiresAuth: true,
+        );
+        print('✅ [NOTIFICATIONS] Notification $id marked as read');
+      }
+    } catch (e) {
+      print('❌ [NOTIFICATIONS] markAsRead error: $e');
     }
   }
 }

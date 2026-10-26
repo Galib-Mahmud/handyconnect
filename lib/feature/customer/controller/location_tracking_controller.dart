@@ -156,10 +156,8 @@ class LocationTrackingController extends GetxController {
 
     connectionState.value = TrackingConnectionState.connecting;
 
-    // Derived from your existing ApiEndpoint.baseUrl — no new constant
-    // needed. https:// → wss://, http:// → ws://, same host/port.
     final uri = Uri.parse(
-      '${_wsBaseUrl(ApiEndpoint.baseUrl)}/ws/tracking/$requestId/?token=$token',
+      '${ApiEndpoint.trackingWebSocket(requestId)}?token=$token',
     );
 
     try {

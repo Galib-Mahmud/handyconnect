@@ -9,7 +9,6 @@ import '../../widget/auth/custom_button.dart';
 import '../../widget/auth/custom_text_field.dart';
 import '../controller/auth_controller.dart';
 
-
 class SignUpScreen extends StatelessWidget {
   const SignUpScreen({super.key});
 
@@ -34,25 +33,6 @@ class SignUpScreen extends StatelessWidget {
                 CustomBackButton(),
 
                 SizedBox(height: 20.h),
-                // // ── Continue with Google ───────────────────────────
-                // _buildSocialButton(
-                //   onTap: c.continueWithGoogle,
-                //   child: Row(
-                //     mainAxisAlignment: MainAxisAlignment.center,
-                //     children: [
-                //       _GoogleIcon(),
-                //       SizedBox(width: 12.w),
-                //       Text(
-                //         'Continue with Google',
-                //         style: TextStyle(
-                //           fontSize: 15.sp,
-                //           fontWeight: FontWeight.w500,
-                //           color: const Color(0xFF212121),
-                //         ),
-                //       ),
-                //     ],
-                //   ),
-                // ),
                 SizedBox(height: 14.h),
 
                 // // ── Continue with Apple ────────────────────────────
@@ -74,7 +54,6 @@ class SignUpScreen extends StatelessWidget {
                 //     ],
                 //   ),
                 // ),
-
                 SizedBox(height: 20.h),
 
                 // Full Name TextField
@@ -109,42 +88,46 @@ class SignUpScreen extends StatelessWidget {
 
                 // Password TextField
                 // Password Field
-                Obx(() => CustomTextField(
-                  icon: Icons.lock_outline,
-                  labelText: 'enter_password'.tr,
-                  controller: c.signUpPasswordController,
-                  obscureText: !c.isSignUpPasswordVisible.value,
-                  suffixIcon: GestureDetector(
-                    onTap: c.toggleSignUpPasswordVisibility,
-                    child: Icon(
-                      c.isSignUpPasswordVisible.value
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      color: const Color(0xFFBDBDBD),
-                      size: 20.sp,
+                Obx(
+                  () => CustomTextField(
+                    icon: Icons.lock_outline,
+                    labelText: 'enter_password'.tr,
+                    controller: c.signUpPasswordController,
+                    obscureText: !c.isSignUpPasswordVisible.value,
+                    suffixIcon: GestureDetector(
+                      onTap: c.toggleSignUpPasswordVisibility,
+                      child: Icon(
+                        c.isSignUpPasswordVisible.value
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: const Color(0xFFBDBDBD),
+                        size: 20.sp,
+                      ),
                     ),
                   ),
-                )),
+                ),
 
                 SizedBox(height: 16.h),
 
-// Re-Enter Password Field
-                Obx(() => CustomTextField(
-                  icon: Icons.lock_outline,
-                  labelText: 'confirm_password'.tr,
-                  controller: c.signUpRePasswordController,
-                  obscureText: !c.isSignUpRePasswordVisible.value,
-                  suffixIcon: GestureDetector(
-                    onTap: c.toggleSignUpRePasswordVisibility,
-                    child: Icon(
-                      c.isSignUpRePasswordVisible.value
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      color: const Color(0xFFBDBDBD),
-                      size: 20.sp,
+                // Re-Enter Password Field
+                Obx(
+                  () => CustomTextField(
+                    icon: Icons.lock_outline,
+                    labelText: 'confirm_password'.tr,
+                    controller: c.signUpRePasswordController,
+                    obscureText: !c.isSignUpRePasswordVisible.value,
+                    suffixIcon: GestureDetector(
+                      onTap: c.toggleSignUpRePasswordVisibility,
+                      child: Icon(
+                        c.isSignUpRePasswordVisible.value
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: const Color(0xFFBDBDBD),
+                        size: 20.sp,
+                      ),
                     ),
                   ),
-                )),
+                ),
                 SizedBox(height: 20.h),
 
                 // ── Register As label ─────────────────────────────
@@ -161,35 +144,39 @@ class SignUpScreen extends StatelessWidget {
                 SizedBox(height: 12.h),
 
                 // ── Role Selection ────────────────────────────────
-                Obx(() => Row(
-                  children: [
-                    Expanded(
-                      child: _RoleCard(
-                        label: 'role_provider'.tr,
-                        icon: Icons.handyman_outlined,
-                        isSelected: c.selectedRole.value == 'PROVIDER',
-                        onTap: () => c.selectRole('PROVIDER'),
+                Obx(
+                  () => Row(
+                    children: [
+                      Expanded(
+                        child: _RoleCard(
+                          label: 'role_provider'.tr,
+                          icon: Icons.handyman_outlined,
+                          isSelected: c.selectedRole.value == 'PROVIDER',
+                          onTap: () => c.selectRole('PROVIDER'),
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 12.w),
-                    Expanded(
-                      child: _RoleCard(
-                        label: 'role_customer'.tr,
-                        icon: Icons.person_outline,
-                        isSelected: c.selectedRole.value == 'CUSTOMER',
-                        onTap: () => c.selectRole('CUSTOMER'),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: _RoleCard(
+                          label: 'role_customer'.tr,
+                          icon: Icons.person_outline,
+                          isSelected: c.selectedRole.value == 'CUSTOMER',
+                          onTap: () => c.selectRole('CUSTOMER'),
+                        ),
                       ),
-                    ),
-                  ],
-                )),
+                    ],
+                  ),
+                ),
 
                 SizedBox(height: 30.h),
 
                 // Sign Up Button
-                Obx(() => CustomButton(
-                  text: c.isLoading.value ? 'please_wait'.tr : 'sign_up'.tr,
-                  onPressed: c.isLoading.value ? null : () => c.register(),
-                )),
+                Obx(
+                  () => CustomButton(
+                    text: c.isLoading.value ? 'please_wait'.tr : 'sign_up'.tr,
+                    onPressed: c.isLoading.value ? null : () => c.register(),
+                  ),
+                ),
 
                 SizedBox(height: 20.h),
 
@@ -252,11 +239,8 @@ class _RoleCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         height: 50.h,
         decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFFF8C106)
-              : Colors.grey.shade50,
+          color: isSelected ? const Color(0xFFF8C106) : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12.r),
-
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -268,11 +252,8 @@ class _RoleCard extends StatelessWidget {
               style: TextStyle(
                 fontFamily: "Inter",
                 fontSize: 18.sp,
-                fontWeight:
-                isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected
-                    ? Colors.white
-                    : Colors.grey.shade600,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? Colors.white : Colors.grey.shade600,
               ),
             ),
           ],
@@ -282,8 +263,10 @@ class _RoleCard extends StatelessWidget {
   }
 }
 
-Widget _buildSocialButton(
-    {required VoidCallback onTap, required Widget child}) {
+Widget _buildSocialButton({
+  required VoidCallback onTap,
+  required Widget child,
+}) {
   return GestureDetector(
     onTap: onTap,
     child: Container(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
 
@@ -56,6 +57,12 @@ class InProgressController extends GetxController {
       <Map<String, dynamic>>[].obs;
   final RxBool isLoadingProviders = false.obs;
   final RxBool isHiring           = false.obs;
+
+  // ── Bill & Job Completion state ──────────────────────────────────
+  final RxBool isConfirmingBill = false.obs;
+  final RxBool isClosingJob     = false.obs;
+  final RxBool isCancelling     = false.obs;
+  final RxBool billConfirmed    = false.obs;
 
   // ── Review state ─────────────────────────────────────────────────
   final RxInt    reviewRating       = 0.obs;
@@ -126,7 +133,8 @@ class InProgressController extends GetxController {
 
       technicianName.value =
           (res['provider_name'] as String?) ?? 'Professional';
-      technicianImage.value = (res['provider_photo'] as String?) ?? '';
+      final rawPhoto = (res['provider_photo'] as String?) ?? '';
+      technicianImage.value = ApiEndpoint.mediaUrl(rawPhoto);
 
       final String apiStatus = (res['status'] as String?) ?? 'PENDING';
       currentStatus.value = apiStatus;
@@ -359,7 +367,132 @@ class InProgressController extends GetxController {
     }
   }
 
-  void cancelOrder() => Get.back();
+  // ── Customer Confirm Bill ───────────────────────────────────────
+  // POST /api/services/requests/{id}/customer-confirm-bill/
+  Future<void> confirmBill() async {
+    if (isConfirmingBill.value) return;
+    if (requestId == 0) return;
+    try {
+      isConfirmingBill.value = true;
+      print('📡 [CONFIRM BILL] POST /services/requests/$requestId/customer-confirm-bill/');
+      final res = await _api.post(
+        ApiEndpoint.customerConfirmBill(requestId),
+        requiresAuth: true,
+      );
+      billConfirmed.value = true;
+      Get.snackbar(
+        'Bill Confirmed',
+        (res?['message'] as String?) ?? 'Bill confirmed successfully.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFF43A047),
+        colorText: Colors.white,
+      );
+      await fetchStatus();
+    } on HttpException catch (e) {
+      print('❌ [CONFIRM BILL] Error: ${e.message}');
+      Get.snackbar('Error', e.message, snackPosition: SnackPosition.TOP);
+    } catch (e) {
+      print('❌ [CONFIRM BILL] Error: $e');
+      Get.snackbar('Error', 'Failed to confirm bill.', snackPosition: SnackPosition.TOP);
+    } finally {
+      isConfirmingBill.value = false;
+    }
+  }
+
+  // ── Close Job ───────────────────────────────────────────────────
+  // POST /api/services/requests/{id}/close-job/
+  Future<void> closeJob() async {
+    if (isClosingJob.value) return;
+    if (requestId == 0) return;
+    try {
+      isClosingJob.value = true;
+      print('📡 [CLOSE JOB] POST /services/requests/$requestId/close-job/');
+      final res = await _api.post(
+        ApiEndpoint.closeJob(requestId),
+        requiresAuth: true,
+      );
+      Get.snackbar(
+        'Job Closed',
+        (res?['message'] as String?) ?? 'Job marked as closed.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFF43A047),
+        colorText: Colors.white,
+      );
+      await fetchStatus();
+    } on HttpException catch (e) {
+      print('❌ [CLOSE JOB] Error: ${e.message}');
+      Get.snackbar('Error', e.message, snackPosition: SnackPosition.TOP);
+    } catch (e) {
+      print('❌ [CLOSE JOB] Error: $e');
+      Get.snackbar('Error', 'Failed to close job.', snackPosition: SnackPosition.TOP);
+    } finally {
+      isClosingJob.value = false;
+    }
+  }
+
+  // ── Cancel Order ────────────────────────────────────────────────
+  // POST /api/services/requests/{id}/cancel/
+  void cancelOrder() {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'cancel_order'.tr.isNotEmpty ? 'cancel_order'.tr : 'Cancel Request',
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: const Text('Are you sure you want to cancel this request? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Keep Request', style: TextStyle(color: Color(0xFF757575))),
+          ),
+          Obx(() => TextButton(
+            onPressed: isCancelling.value ? null : _doCancelOrder,
+            child: isCancelling.value
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE53935)),
+                  )
+                : const Text(
+                    'Yes, Cancel',
+                    style: TextStyle(color: Color(0xFFE53935), fontWeight: FontWeight.w700),
+                  ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _doCancelOrder() async {
+    if (requestId == 0) return;
+    try {
+      isCancelling.value = true;
+      print('📡 [CANCEL] POST /services/requests/$requestId/cancel/');
+      await _api.post(
+        ApiEndpoint.cancelRequest(requestId),
+        requiresAuth: true,
+      );
+      Get.back(); // close dialog
+      currentStatus.value = 'CANCELLED';
+      Get.snackbar(
+        'Cancelled',
+        'Your request has been cancelled.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFFF8C106),
+        colorText: Colors.black,
+      );
+      await fetchStatus();
+    } on HttpException catch (e) {
+      Get.back();
+      Get.snackbar('Error', e.message, snackPosition: SnackPosition.TOP);
+    } catch (e) {
+      Get.back();
+      Get.snackbar('Error', 'Failed to cancel request.', snackPosition: SnackPosition.TOP);
+    } finally {
+      isCancelling.value = false;
+    }
+  }
 
   void openChat() {
     if (Get.isRegistered<ProfessionalChatController>()) {

@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../../core/endpoint/api_endpoint.dart';
 import '../../../core/local_storage/user_info.dart';
 import '../../../route/route_name.dart';
 import '../controller/customer_in_progress_controller.dart';
@@ -106,6 +107,17 @@ class CustomerInProgressScreen extends StatelessWidget {
                       SizedBox(height: 8.h),
                       _buildTimeline(controller),
                       SizedBox(height: 24.h),
+
+                      // ── Bill Confirmation & Close Job (shown when COMPLETED) ──
+                      Obx(() {
+                        if (controller.currentStatus.value == 'COMPLETED') {
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: 24.h),
+                            child: _buildBillActionCard(controller),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      }),
 
                       // ── Review (always shown) ──────────────────
                       _buildReviewCard(controller),
@@ -374,9 +386,7 @@ class CustomerInProgressScreen extends StatelessWidget {
 
     String? fullPhoto;
     if (photo != null && photo.isNotEmpty) {
-      fullPhoto = photo.startsWith('http')
-          ? photo
-          : 'https://handyapi.dsrt321.online$photo';
+      fullPhoto = ApiEndpoint.mediaUrl(photo);
     }
 
     return Container(
@@ -557,6 +567,114 @@ class CustomerInProgressScreen extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────── Bill Confirmation & Close Job Card ─────────────
+  Widget _buildBillActionCard(InProgressController controller) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFFF8C106), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFF8C106).withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42.w,
+                height: 42.w,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE8F5E9),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.receipt_long_rounded, color: const Color(0xFF2E7D32), size: 22.sp),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bill Submitted by Professional',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF212121),
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Please confirm the completion bill or close the job.',
+                      style: TextStyle(fontSize: 12.sp, color: const Color(0xFF757575)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          Row(
+            children: [
+              Expanded(
+                child: Obx(() => ElevatedButton(
+                  onPressed: controller.isConfirmingBill.value ? null : controller.confirmBill,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF8C106),
+                    foregroundColor: Colors.black,
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                    elevation: 0,
+                  ),
+                  child: controller.isConfirmingBill.value
+                      ? SizedBox(
+                          width: 18.w,
+                          height: 18.w,
+                          child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                        )
+                      : Text(
+                          'Confirm Bill',
+                          style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700),
+                        ),
+                )),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Obx(() => OutlinedButton(
+                  onPressed: controller.isClosingJob.value ? null : controller.closeJob,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF2E7D32),
+                    side: const BorderSide(color: Color(0xFF2E7D32), width: 1.5),
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                  ),
+                  child: controller.isClosingJob.value
+                      ? SizedBox(
+                          width: 18.w,
+                          height: 18.w,
+                          child: const CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2E7D32)),
+                        )
+                      : Text(
+                          'Close Job',
+                          style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700),
+                        ),
+                )),
+              ),
+            ],
           ),
         ],
       ),

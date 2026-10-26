@@ -1,9 +1,10 @@
 // lib/feature/professional/activejob/controller/active_job_controller.dart
 
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
-
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/endpoint/api_client.dart';
@@ -77,13 +78,23 @@ class ActiveJobController extends GetxController {
   // ── Progress steps ────────────────────────────────────────────────
   final RxList<JobProgressStep> progressSteps = <JobProgressStep>[].obs;
 
+  Timer? _locationTimer;
+
   @override
   void onInit() {
     super.onInit();
     final args = Get.arguments as Map<String, dynamic>? ?? {};
     _loadFromArgs(args);
     _rebuildSteps();
-    // ✅ Do NOT call respond/accept here — already done in JobRequestsController
+    if (jobStatusCode.value == 'ON_THE_WAY') {
+      _startLiveLocationTracking();
+    }
+  }
+
+  @override
+  void onClose() {
+    _stopLiveLocationTracking();
+    super.onClose();
   }
 
   void _loadFromArgs(Map<String, dynamic> args) {
@@ -146,6 +157,11 @@ class ActiveJobController extends GetxController {
       if (res != null && res['timeline'] != null) {
         _applyTimeline(_asMap(res['timeline']));
       }
+      if (newCode == 'ON_THE_WAY') {
+        _startLiveLocationTracking();
+      } else {
+        _stopLiveLocationTracking();
+      }
       _rebuildSteps();
       print('✅ [ADVANCE] → $newCode');
     } on HttpException catch (e) {
@@ -158,30 +174,58 @@ class ActiveJobController extends GetxController {
     }
   }
 
+  // ─── Live Location Broadcasting ────────────────────────────────────
+  // POST /api/services/requests/{id}/live-location/
+  void _startLiveLocationTracking() {
+    _locationTimer?.cancel();
+    _broadcastCurrentLocation();
+    _locationTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _broadcastCurrentLocation();
+    });
+  }
+
+  void _stopLiveLocationTracking() {
+    _locationTimer?.cancel();
+    _locationTimer = null;
+  }
+
+  Future<void> _broadcastCurrentLocation() async {
+    if (jobId == 0 || jobStatusCode.value != 'ON_THE_WAY') {
+      _stopLiveLocationTracking();
+      return;
+    }
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      print('📡 [LIVE LOCATION] Broadcasting lat=${pos.latitude}, lng=${pos.longitude}');
+      await _apiClient.post(
+        ApiEndpoint.proLiveLocation(jobId),
+        body: {'lat': pos.latitude, 'lng': pos.longitude},
+        requiresAuth: true,
+      );
+    } catch (e) {
+      print('⚠️ [LIVE LOCATION] Broadcast failed: $e');
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────
   // POST /services/requests/{id}/submit-bill/
-  // Multipart: bill_image, before_photo, after_photo
+  // Multipart: bill_image, optional before_photo, optional after_photo
   // ─────────────────────────────────────────────────────────────────
   Future<void> submitBill() async {
     print('🔍 [BILL] bill=${billImagePath.value}');
     print('🔍 [BILL] before=${beforePhotoPath.value}');
     print('🔍 [BILL] after=${afterPhotoPath.value}');
 
-    if (billImageFile == null ||
-        beforePhotoFile == null ||
-        afterPhotoFile == null) {
-      _showError('Please attach bill image, before photo, and after photo.');
+    if (billImageFile == null) {
+      _showError('Please attach bill image.');
       return;
     }
 
-    // Verify files actually exist on disk
-    final missing = <String>[];
-    if (!await billImageFile!.exists()) missing.add('bill');
-    if (!await beforePhotoFile!.exists()) missing.add('before');
-    if (!await afterPhotoFile!.exists()) missing.add('after');
-    if (missing.isNotEmpty) {
-      print('❌ [BILL] Files not found on disk: $missing');
-      _showError('Some images could not be found. Please re-select.');
+    // Verify bill image exists on disk
+    if (!await billImageFile!.exists()) {
+      _showError('Bill image could not be found. Please re-select.');
       return;
     }
 
@@ -190,15 +234,21 @@ class ActiveJobController extends GetxController {
       print('📤 [BILL] Uploading to id=$jobId');
       print('   endpoint: ${ApiEndpoint.proSubmitBill(jobId)}');
 
+      final files = <String, File>{
+        'bill_image': billImageFile!,
+      };
+      if (beforePhotoFile != null && await beforePhotoFile!.exists()) {
+        files['before_photo'] = beforePhotoFile!;
+      }
+      if (afterPhotoFile != null && await afterPhotoFile!.exists()) {
+        files['after_photo'] = afterPhotoFile!;
+      }
+
       final res = await _apiClient.multipart(
         ApiEndpoint.proSubmitBill(jobId),
         method: 'POST',
         fields: {},
-        files: {
-          'bill_image'  : billImageFile!,
-          'before_photo': beforePhotoFile!,
-          'after_photo' : afterPhotoFile!,
-        },
+        files: files,
         requiresAuth: true,
       );
 

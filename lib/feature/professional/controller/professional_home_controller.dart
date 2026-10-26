@@ -78,9 +78,7 @@ class ProfessionalHomeController extends GetxController {
       // photo is a relative path like "/media/providers/photos/..."
       // prepend base URL so Image.network can load it correctly
       final rawPhoto = (profile['photo'] as String?) ?? '';
-      professionalImage.value = rawPhoto.isNotEmpty
-          ? '${ApiEndpoint.baseUrl}$rawPhoto'
-          : '';
+      professionalImage.value = ApiEndpoint.mediaUrl(rawPhoto);
 
       final profileRating =
           double.tryParse(profile['rating']?.toString() ?? '0') ?? 0.0;

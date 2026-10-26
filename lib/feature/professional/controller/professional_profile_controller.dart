@@ -32,6 +32,37 @@ class ProviderService {
   );
 }
 
+// ── Received Review Model ──────────────────────────────────────────
+class ReceivedReviewModel {
+  final int id;
+  final String customerName;
+  final String? customerPhoto;
+  final double rating;
+  final String comment;
+  final String createdAt;
+
+  const ReceivedReviewModel({
+    required this.id,
+    required this.customerName,
+    this.customerPhoto,
+    required this.rating,
+    required this.comment,
+    required this.createdAt,
+  });
+
+  factory ReceivedReviewModel.fromJson(Map<String, dynamic> j) {
+    final rawPhoto = (j['customer_photo'] ?? j['avatar'] ?? j['user_photo']) as String?;
+    return ReceivedReviewModel(
+      id: (j['id'] as int?) ?? 0,
+      customerName: (j['customer_name'] ?? j['customer']?['full_name'] ?? j['reviewer_name'] ?? 'Customer').toString(),
+      customerPhoto: (rawPhoto != null && rawPhoto.isNotEmpty) ? ApiEndpoint.mediaUrl(rawPhoto) : null,
+      rating: double.tryParse((j['rating'] ?? '5').toString()) ?? 5.0,
+      comment: (j['comment'] ?? j['review'] ?? '').toString(),
+      createdAt: (j['created_at_human'] ?? j['created_at'] ?? '').toString(),
+    );
+  }
+}
+
 class ProfessionalProfileController extends GetxController {
   final ApiClient _apiClient = ApiClient(baseUrl: ApiEndpoint.baseUrl);
 
@@ -56,6 +87,10 @@ class ProfessionalProfileController extends GetxController {
   // ── Rating breakdown {5:0, 4:0, ...} ───────────────────────────
   final ratingBreakdown = <String, int>{}.obs;
 
+  // ── Reviews received (GET /api/services/reviews/received/) ───────
+  final receivedReviews = <ReceivedReviewModel>[].obs;
+  final isLoadingReviews = false.obs;
+
   // ── Services (deduplicated) ────────────────────────────────────
   final services = <ProviderService>[].obs;
 
@@ -73,6 +108,7 @@ class ProfessionalProfileController extends GetxController {
   void onInit() {
     super.onInit();
     fetchProfile();
+    fetchReceivedReviews();
   }
 
   void selectTab(int index) => selectedTab.value = index;
@@ -102,7 +138,8 @@ class ProfessionalProfileController extends GetxController {
       name.value        = (res['full_name'] as String?) ?? 'Professional';
       email.value       = (res['email'] as String?) ?? '';
       bio.value         = (res['bio'] as String?) ?? '';
-      photo.value       = (res['profile_photo'] as String?) ?? '';
+      final rawPhoto    = (res['profile_photo'] as String?) ?? '';
+      photo.value       = ApiEndpoint.mediaUrl(rawPhoto);
       radiusKm.value    = (res['radius_km'] as num?)?.toInt() ?? 0;
       jobsCount.value   = (res['jobs_count'] as num?)?.toInt() ?? 0;
       rating.value      = (res['average_rating'] as num?)?.toDouble() ?? 0.0;
@@ -147,6 +184,95 @@ class ProfessionalProfileController extends GetxController {
     } catch (e) {
       print('❌ [PROFILE] Error: $e');
       errorMsg.value = 'Could not load profile.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // GET /api/services/reviews/received/
+  // ─────────────────────────────────────────────────────────────────
+  Future<void> fetchReceivedReviews() async {
+    try {
+      isLoadingReviews.value = true;
+      print('⭐ [REVIEWS RECEIVED] GET /services/reviews/received/');
+      final res = await _apiClient.get(
+        ApiEndpoint.reviewsReceived,
+        requiresAuth: true,
+      );
+      final List<dynamic> list = res is List ? res : (res['results'] as List? ?? []);
+      receivedReviews.assignAll(
+        list.map((e) => ReceivedReviewModel.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
+      );
+      print('✅ [REVIEWS RECEIVED] Loaded ${receivedReviews.length} review(s)');
+    } catch (e) {
+      print('❌ [REVIEWS RECEIVED] Error: $e');
+    } finally {
+      isLoadingReviews.value = false;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // GET /api/auth/me/
+  // ─────────────────────────────────────────────────────────────────
+  Future<void> fetchCurrentUser() async {
+    try {
+      final res = await _apiClient.get(ApiEndpoint.authMe, requiresAuth: true);
+      if (res != null) {
+        if (res['full_name'] != null) {
+          name.value = res['full_name'];
+          await UserInfo.setFullName(res['full_name']);
+        }
+        if (res['email'] != null) email.value = res['email'];
+      }
+    } catch (e) {
+      print('❌ fetchCurrentUser error: $e');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // PATCH /api/auth/me/
+  // ─────────────────────────────────────────────────────────────────
+  Future<bool> updateProfile({
+    String? fullName,
+    String? phoneNumber,
+    String? language,
+  }) async {
+    try {
+      isLoading.value = true;
+      final body = <String, dynamic>{
+        if (fullName != null && fullName.trim().isNotEmpty) 'full_name': fullName.trim(),
+        if (phoneNumber != null && phoneNumber.trim().isNotEmpty) 'phone_number': phoneNumber.trim(),
+        if (language != null && language.trim().isNotEmpty) 'language': language.trim(),
+      };
+
+      final res = await _apiClient.patch(
+        ApiEndpoint.authMe,
+        body: body,
+        requiresAuth: true,
+      );
+
+      if (res != null) {
+        if (res['full_name'] != null) {
+          name.value = res['full_name'];
+          await UserInfo.setFullName(res['full_name']);
+        }
+      }
+
+      Get.snackbar(
+        'Success',
+        'Profile updated successfully.',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: const Color(0xFFF8C106),
+        colorText: Colors.black,
+      );
+      return true;
+    } on HttpException catch (e) {
+      Get.snackbar('Error', e.message, snackPosition: SnackPosition.TOP);
+      return false;
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to update profile.', snackPosition: SnackPosition.TOP);
+      return false;
     } finally {
       isLoading.value = false;
     }

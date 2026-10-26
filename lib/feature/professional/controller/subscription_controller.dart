@@ -26,24 +26,24 @@ class SubscriptionController extends GetxController {
   void selectYearly()  => isYearly.value = true;
 
   // ── POST /pro/subscription/activate/ ─────────────────────────────
-  Future<void> activateSubscription() async {
+  Future<void> activateSubscription({String? plan}) async {
     isLoading.value = true;
     try {
-      print('📤 [SUBSCRIPTION] Activating plan: $selectedPlanType');
+      final planToSend = plan ?? 'TRIAL';
+      print('📤 [SUBSCRIPTION] Activating plan: $planToSend');
 
       final response = await _apiClient.post(
         ApiEndpoint.activateSubscription,
-        body: {'plan_type': selectedPlanType},
+        body: {'plan_type': planToSend},
       );
 
       print('✅ [SUBSCRIPTION] Response: $response');
 
-      // Success → clear session → go to sign in
-      await UserInfo.clearAll();
+      await UserInfo.setOnboardingStatus('APPROVED');
 
       Get.snackbar(
         'Subscribed!',
-        response['message']?.toString() ?? 'Subscription activated.',
+        response is Map ? (response['message']?.toString() ?? 'Subscription activated.') : 'Subscription activated.',
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.green.shade700,
         colorText: Colors.white,
@@ -53,9 +53,9 @@ class SubscriptionController extends GetxController {
         duration: const Duration(seconds: 3),
       );
 
-      // Small delay so snackbar is visible before navigation
-      await Future.delayed(const Duration(seconds: 2));
-      Get.offAllNamed(RouteName.signin);
+      // Navigate directly into provider home
+      await Future.delayed(const Duration(seconds: 1));
+      Get.offAllNamed(RouteName.main1);
 
     } on HttpException catch (e) {
       print('❌ [SUBSCRIPTION] HttpException: ${e.message}');

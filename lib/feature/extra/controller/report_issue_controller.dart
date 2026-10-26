@@ -31,9 +31,10 @@ class ReportIssueController extends GetxController {
       await _apiClient.post(
         ApiEndpoint.support,
         body: {
+          'subject': reason,
+          'message': details.isNotEmpty ? details : reason,
           'reason': reason,
           'details': details,
-          'message': '$reason: $details',
         },
         requiresAuth: true,
       );

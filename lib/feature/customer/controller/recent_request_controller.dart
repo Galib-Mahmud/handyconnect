@@ -23,11 +23,16 @@ class RecentRequestModel {
 
   factory RecentRequestModel.fromJson(Map<String, dynamic> json) {
     return RecentRequestModel(
-      id          : json['id'] as int,
-      serviceName : (json['service_name'] as String?) ?? '',
+      id          : (json['id'] as int?) ?? 0,
+      serviceName : (json['service_name'] as String?) ??
+          (json['category_name'] as String?) ??
+          (json['service'] is Map ? json['service']['name_en']?.toString() : null) ??
+          'Service Request',
       serviceIcon : (json['service_icon'] as String?) ?? 'water_drop',
-      displayText : (json['display_text'] as String?) ?? '',
-      status      : (json['status']       as String?) ?? '',
+      displayText : (json['display_text'] as String?) ??
+          (json['description'] as String?) ??
+          '',
+      status      : (json['status'] as String?) ?? 'PENDING',
     );
   }
 
@@ -104,15 +109,15 @@ class RecentRequestController extends GetxController {
     fetchRequests();
   }
 
-  // ── GET /services/recent-requests/ ────────────────────────────────
+  // ── GET /api/services/requests/?page_size=50 ─────────────────────
   Future<void> fetchRequests() async {
     try {
       isLoading.value    = true;
       errorMessage.value = '';
-      print('📋 [RECENT REQUESTS] Fetching...');
+      print('📋 [CUSTOMER REQUESTS] Fetching...');
 
       final res = await _apiClient.get(
-        ApiEndpoint.recentRequests, // →
+        ApiEndpoint.customerRequests, // → /services/requests/?page_size=50
         requiresAuth: true,
       );
 

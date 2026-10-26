@@ -480,6 +480,31 @@ class AuthController extends GetxController {
   void goToForgotPassword() => Get.toNamed(RouteName.forgetPass);
   void goToSignUp() => Get.toNamed(RouteName.signup);
 
+  Future<void> continueWithGoogle() async {
+    isLoading.value = true;
+    try {
+      final account = await GoogleSignIn.instance.authenticate();
+      final idToken = account.authentication.idToken;
+
+      final response = await _apiClient.post(
+        ApiEndpoint.googleLogin,
+        body: {
+          'id_token': idToken,
+          'email': account.email,
+          'full_name': account.displayName ?? '',
+        },
+        requiresAuth: false,
+      );
+
+      _handleSocialResponse(response);
+    } catch (e) {
+      print('❌ Google sign-in error: $e');
+      _showError('Google sign-in failed. Please try again.');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   void continueWithApple() => _showInfo('Apple sign-in coming soon');
 
   // ─────────────────────────────────────────────────────────────────
