@@ -35,6 +35,8 @@ const _statusOrder = {
   'IN_PROGRESS': 3,
   'COMPLETED'  : 4,
   'REVIEWED'   : 5,
+  'BILLED'     : 6,
+  'CLOSED'     : 7,
 };
 
 // ── Controller ─────────────────────────────────────────────────────
@@ -100,7 +102,7 @@ class InProgressController extends GetxController {
 
     fetchStatus();
     _pollTimer =
-        Timer.periodic(const Duration(seconds: 15), (_) => fetchStatus());
+        Timer.periodic(const Duration(seconds: 4), (_) => fetchStatus());
   }
 
   @override
@@ -157,8 +159,8 @@ class InProgressController extends GetxController {
 
       print('✅ [IN-PROGRESS] status=$apiStatus  provider=${technicianName.value}');
 
-      // Stop polling once reviewed (terminal state)
-      if (apiStatus == 'REVIEWED') {
+      // Stop polling once closed or cancelled (terminal states)
+      if (apiStatus == 'CLOSED' || apiStatus == 'CANCELLED') {
         _pollTimer?.cancel();
       }
 
@@ -289,7 +291,7 @@ class InProgressController extends GetxController {
 
       hasReviewed.value = true;
       currentStatus.value = (res?['status'] as String?) ?? 'REVIEWED';
-      _pollTimer?.cancel();
+      await fetchStatus();
 
       Get.snackbar(
         'Thank you!',
@@ -340,10 +342,21 @@ class InProgressController extends GetxController {
         subtitle = _activeSubtitle(apiStatus);
       }
 
+      String? time;
+      final key = def.$2;
+      if (key != null && tl[key] != null) {
+        final dt = DateTime.tryParse(tl[key].toString());
+        if (dt != null) {
+          final l = dt.toLocal();
+          time = '${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')}';
+        }
+      }
+
       return TimelineStep(
         label: label,
         subtitle: subtitle,
         status: status,
+        time: time,
       );
     }).toList();
   }

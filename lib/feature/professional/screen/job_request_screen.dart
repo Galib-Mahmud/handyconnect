@@ -8,13 +8,33 @@ import '../../chat/controller/chat_controller.dart';
 import '../../chat/screen/chat_screen.dart';
 import '../controller/job_request_controller.dart';
 
-class JobRequestsScreen extends StatelessWidget {
-  const JobRequestsScreen({super.key});
+class JobRequestsScreen extends StatefulWidget {
+  final RequestFilterType? initialFilter;
+  const JobRequestsScreen({super.key, this.initialFilter});
+
+  @override
+  State<JobRequestsScreen> createState() => _JobRequestsScreenState();
+}
+
+class _JobRequestsScreenState extends State<JobRequestsScreen> {
+  late final JobRequestsController c;
+
+  @override
+  void initState() {
+    super.initState();
+    c = Get.isRegistered<JobRequestsController>()
+        ? Get.find<JobRequestsController>()
+        : Get.put(JobRequestsController());
+
+    if (widget.initialFilter != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        c.changeFilter(widget.initialFilter!);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final c = Get.put(JobRequestsController());
-
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F4),
       body: SafeArea(
@@ -72,6 +92,11 @@ class JobRequestsScreen extends StatelessWidget {
         'type': RequestFilterType.active,
         'label': 'filter_active'.tr,
         'icon': Icons.check_circle_outline
+      },
+      {
+        'type': RequestFilterType.completed,
+        'label': 'filter_completed'.tr,
+        'icon': Icons.task_alt
       },
       {
         'type': RequestFilterType.private,
@@ -183,6 +208,10 @@ class JobRequestsScreen extends StatelessWidget {
       RequestFilterType.active: {
         'msg': 'No active requests',
         'icon': Icons.work_outline
+      },
+      RequestFilterType.completed: {
+        'msg': 'No completed requests',
+        'icon': Icons.task_alt
       },
       RequestFilterType.private: {
         'msg': 'No private requests',
@@ -297,14 +326,18 @@ class _RequestCard extends StatelessWidget {
   });
 
   bool get _isPending => request.status.toUpperCase() == 'PENDING';
-  bool get _isDimmed =>
-      request.isSold ||
-          ['COMPLETED', 'IN_PROGRESS'].contains(request.status.toUpperCase());
+  bool get _isCompleted =>
+      request.status.toUpperCase() == 'COMPLETED' ||
+      filterType == RequestFilterType.completed;
+  bool get _isActiveJob =>
+      ['IN_PROGRESS', 'ACCEPTED', 'ON_THE_WAY'].contains(request.status.toUpperCase()) ||
+      filterType == RequestFilterType.active;
+  bool get _isDimmed => request.isSold;
 
   @override
   Widget build(BuildContext context) {
+    final canView = _isActiveJob || _isCompleted;
     return Container(
-      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: _isDimmed ? const Color(0xFFF5F5F5) : Colors.white,
         borderRadius: BorderRadius.circular(16.r),
@@ -320,19 +353,29 @@ class _RequestCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildClientRow(),
-          SizedBox(height: 14.h),
-          _buildIssueBox(),
-          SizedBox(height: 12.h),
-          _buildAddressRow(),
-          SizedBox(height: 12.h),
-          const Divider(height: 1, color: Color(0xFFF0F0F0)),
-          SizedBox(height: 12.h),
-          _buildBottomRow(),
-        ],
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16.r),
+          onTap: canView ? () => controller.viewActiveJob(request.id) : null,
+          child: Padding(
+            padding: EdgeInsets.all(16.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildClientRow(),
+                SizedBox(height: 14.h),
+                _buildIssueBox(),
+                SizedBox(height: 12.h),
+                _buildAddressRow(),
+                SizedBox(height: 12.h),
+                const Divider(height: 1, color: Color(0xFFF0F0F0)),
+                SizedBox(height: 12.h),
+                _buildBottomRow(),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -587,13 +630,52 @@ class _RequestCard extends StatelessWidget {
 
     final status = request.status.toUpperCase();
 
-    if (status == 'COMPLETED') {
-      return _buildStatusBadge(
-          label: 'Completed', color: const Color(0xFF43A047));
+    if (status == 'COMPLETED' || filterType == RequestFilterType.completed) {
+      return GestureDetector(
+        onTap: () => controller.viewActiveJob(request.id),
+        child: _buildStatusBadge(
+            label: request.statusDisplay.isNotEmpty ? request.statusDisplay : 'Completed',
+            color: const Color(0xFF43A047)),
+      );
     }
     if (['IN_PROGRESS', 'ACCEPTED', 'ON_THE_WAY'].contains(status)) {
-      return _buildStatusBadge(
-          label: request.statusDisplay, color: const Color(0xFF1565C0));
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () => controller.viewActiveJob(request.id),
+            child: _buildStatusBadge(
+                label: request.statusDisplay, color: const Color(0xFF1565C0)),
+          ),
+          SizedBox(width: 8.w),
+          GestureDetector(
+            onTap: () => controller.viewActiveJob(request.id),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8C106),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.arrow_forward_rounded,
+                      size: 14.sp, color: Colors.white),
+                  SizedBox(width: 4.w),
+                  Text(
+                    'manage_job'.tr,
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
     }
 
     // Active filter → View Details

@@ -153,7 +153,10 @@ class ProfileController extends GetxController {
       final body = <String, dynamic>{
         if (fullName != null && fullName.trim().isNotEmpty) 'full_name': fullName.trim(),
         if (phoneNumber != null && phoneNumber.trim().isNotEmpty) 'phone_number': phoneNumber.trim(),
-        if (language != null && language.trim().isNotEmpty) 'language': language.trim(),
+        if (language != null && language.trim().isNotEmpty) ...{
+          'preferred_language': language.trim(),
+          'language': language.trim(),
+        },
       };
 
       final res = await _apiClient.patch(

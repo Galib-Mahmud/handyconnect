@@ -79,7 +79,7 @@ class CustomerInProgressScreen extends StatelessWidget {
           return Column(
             children: [
               SizedBox(height: 16.h),
-              _buildHeader(),
+              _buildHeader(controller),
               Divider(height: 24.h, color: const Color(0xFFEEEEEE)),
               Expanded(
                 child: SingleChildScrollView(
@@ -87,8 +87,36 @@ class CustomerInProgressScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildMapView(trackingController),
-                      SizedBox(height: 16.h),
+                      // ── Map or Status Banner based on actual job stage ──
+                      Obx(() {
+                        final st = controller.currentStatus.value;
+                        if (st == 'ACCEPTED' || st == 'ON_THE_WAY') {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildMapView(trackingController),
+                              SizedBox(height: 16.h),
+                            ],
+                          );
+                        } else if (st == 'IN_PROGRESS') {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildInProgressBanner(),
+                              SizedBox(height: 16.h),
+                            ],
+                          );
+                        } else if (st == 'COMPLETED') {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildCompletedBanner(),
+                              SizedBox(height: 16.h),
+                            ],
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      }),
                       _buildTechnicianCard(controller),
                       SizedBox(height: 16.h),
 
@@ -108,20 +136,32 @@ class CustomerInProgressScreen extends StatelessWidget {
                       _buildTimeline(controller),
                       SizedBox(height: 24.h),
 
-                      // ── Bill Confirmation & Close Job (shown when COMPLETED) ──
+                      // ── Conditional post-completion action cards (Django lifecycle) ──
                       Obx(() {
-                        if (controller.currentStatus.value == 'COMPLETED') {
+                        final st = controller.currentStatus.value;
+                        if (st == 'COMPLETED') {
                           return Padding(
                             padding: EdgeInsets.only(bottom: 24.h),
-                            child: _buildBillActionCard(controller),
+                            child: _buildReviewCard(controller),
+                          );
+                        } else if (st == 'REVIEWED') {
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: 24.h),
+                            child: _buildConfirmBillCard(controller),
+                          );
+                        } else if (st == 'BILLED') {
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: 24.h),
+                            child: _buildCloseJobCard(controller),
+                          );
+                        } else if (st == 'CLOSED') {
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: 24.h),
+                            child: _buildClosedJobCard(),
                           );
                         }
                         return const SizedBox.shrink();
                       }),
-
-                      // ── Review (always shown) ──────────────────
-                      _buildReviewCard(controller),
-                      SizedBox(height: 24.h),
                     ],
                   ),
                 ),
@@ -135,7 +175,7 @@ class CustomerInProgressScreen extends StatelessWidget {
   }
 
   // ─────────────────────── Header ──────────────────────────────────
-  Widget _buildHeader() {
+  Widget _buildHeader(InProgressController controller) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.w),
       child: Row(
@@ -146,12 +186,154 @@ class CustomerInProgressScreen extends StatelessWidget {
                 size: 22.sp, color: const Color(0xFF212121)),
           ),
           SizedBox(width: 16.w),
-          Text(
-            'step_in_progress'.tr,
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF212121),
+          Obx(() {
+            String title = 'order_status'.tr;
+            final st = controller.currentStatus.value;
+            switch (st) {
+              case 'PENDING':
+                title = 'step_pending'.tr;
+                break;
+              case 'ACCEPTED':
+                title = 'step_accepted'.tr;
+                break;
+              case 'ON_THE_WAY':
+                title = 'step_on_the_way'.tr;
+                break;
+              case 'IN_PROGRESS':
+                title = 'step_in_progress'.tr;
+                break;
+              case 'COMPLETED':
+                title = 'step_completed'.tr;
+                break;
+              case 'REVIEWED':
+                title = 'step_reviewed'.tr;
+                break;
+              case 'BILLED':
+                title = 'Bill Confirmation';
+                break;
+              case 'CLOSED':
+                title = 'Closed';
+                break;
+            }
+            return Text(
+              title,
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF212121),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInProgressBanner() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFF43A047), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF43A047).withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.w),
+            decoration: const BoxDecoration(
+              color: Color(0xFF43A047),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.build_rounded, color: Colors.white, size: 22.sp),
+          ),
+          SizedBox(width: 14.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Work In Progress',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF2E7D32),
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  'The professional has arrived and is currently working on your request.',
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: const Color(0xFF388E3C),
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompletedBanner() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E1),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFFF8C106), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFF8C106).withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.w),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF8C106),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.check_circle_rounded, color: Colors.white, size: 24.sp),
+          ),
+          SizedBox(width: 14.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Job Completed!',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF212121),
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  'The professional has finished the work. Please submit your review below.',
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    color: const Color(0xFF616161),
+                    height: 1.3,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -573,8 +755,8 @@ class CustomerInProgressScreen extends StatelessWidget {
     );
   }
 
-  // ─────────────────── Bill Confirmation & Close Job Card ─────────────
-  Widget _buildBillActionCard(InProgressController controller) {
+  // ─────────────────── Step 2: Confirm Bill Card (Status: REVIEWED) ─────
+  Widget _buildConfirmBillCard(InProgressController controller) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(20.w),
@@ -599,10 +781,10 @@ class CustomerInProgressScreen extends StatelessWidget {
                 width: 42.w,
                 height: 42.w,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFE8F5E9),
+                  color: Color(0xFFFFF8E1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.receipt_long_rounded, color: const Color(0xFF2E7D32), size: 22.sp),
+                child: Icon(Icons.receipt_long_rounded, color: const Color(0xFFF57F17), size: 22.sp),
               ),
               SizedBox(width: 12.w),
               Expanded(
@@ -610,7 +792,7 @@ class CustomerInProgressScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Bill Submitted by Professional',
+                      'Bill Ready for Confirmation',
                       style: TextStyle(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w700,
@@ -619,7 +801,7 @@ class CustomerInProgressScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 2.h),
                     Text(
-                      'Please confirm the completion bill or close the job.',
+                      'Your review has been submitted. Please review and confirm the bill.',
                       style: TextStyle(fontSize: 12.sp, color: const Color(0xFF757575)),
                     ),
                   ],
@@ -628,53 +810,144 @@ class CustomerInProgressScreen extends StatelessWidget {
             ],
           ),
           SizedBox(height: 16.h),
+          SizedBox(
+            width: double.infinity,
+            child: Obx(() => ElevatedButton(
+              onPressed: controller.isConfirmingBill.value ? null : controller.confirmBill,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF8C106),
+                foregroundColor: Colors.black,
+                padding: EdgeInsets.symmetric(vertical: 14.h),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                elevation: 0,
+              ),
+              child: controller.isConfirmingBill.value
+                  ? SizedBox(
+                      width: 18.w,
+                      height: 18.w,
+                      child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                    )
+                  : Text(
+                      'Confirm & Approve Bill',
+                      style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w700),
+                    ),
+            )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────── Step 3: Close Job Card (Status: BILLED) ─────────
+  Widget _buildCloseJobCard(InProgressController controller) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFF2E7D32), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2E7D32).withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
             children: [
-              Expanded(
-                child: Obx(() => ElevatedButton(
-                  onPressed: controller.isConfirmingBill.value ? null : controller.confirmBill,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF8C106),
-                    foregroundColor: Colors.black,
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                    elevation: 0,
-                  ),
-                  child: controller.isConfirmingBill.value
-                      ? SizedBox(
-                          width: 18.w,
-                          height: 18.w,
-                          child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                        )
-                      : Text(
-                          'Confirm Bill',
-                          style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700),
-                        ),
-                )),
+              Container(
+                width: 42.w,
+                height: 42.w,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE8F5E9),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.task_alt_rounded, color: const Color(0xFF2E7D32), size: 22.sp),
               ),
               SizedBox(width: 12.w),
               Expanded(
-                child: Obx(() => OutlinedButton(
-                  onPressed: controller.isClosingJob.value ? null : controller.closeJob,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF2E7D32),
-                    side: const BorderSide(color: Color(0xFF2E7D32), width: 1.5),
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                  ),
-                  child: controller.isClosingJob.value
-                      ? SizedBox(
-                          width: 18.w,
-                          height: 18.w,
-                          child: const CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2E7D32)),
-                        )
-                      : Text(
-                          'Close Job',
-                          style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700),
-                        ),
-                )),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Payment Confirmed',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF212121),
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Bill has been verified and settled. Please close this job.',
+                      style: TextStyle(fontSize: 12.sp, color: const Color(0xFF757575)),
+                    ),
+                  ],
+                ),
               ),
             ],
+          ),
+          SizedBox(height: 16.h),
+          SizedBox(
+            width: double.infinity,
+            child: Obx(() => ElevatedButton(
+              onPressed: controller.isClosingJob.value ? null : controller.closeJob,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2E7D32),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 14.h),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                elevation: 0,
+              ),
+              child: controller.isClosingJob.value
+                  ? SizedBox(
+                      width: 18.w,
+                      height: 18.w,
+                      child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(
+                      'Close Job',
+                      style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w700, color: Colors.white),
+                    ),
+            )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────── Step 4: Closed Confirmation (Status: CLOSED) ────
+  Widget _buildClosedJobCard() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFF43A047).withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.verified_rounded, color: const Color(0xFF2E7D32), size: 40.sp),
+          SizedBox(height: 10.h),
+          Text(
+            'Job Completed & Closed',
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1B5E20),
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            'Thank you for using our service. All records have been archived.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12.sp, color: const Color(0xFF388E3C)),
           ),
         ],
       ),

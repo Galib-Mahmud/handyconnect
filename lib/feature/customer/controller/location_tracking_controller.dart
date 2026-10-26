@@ -280,7 +280,9 @@ class LocationTrackingController extends GetxController {
   void _teardown() {
     _wsSub?.cancel();
     _wsSub = null;
-    _channel?.sink.close(ws_status.goingAway);
+    try {
+      _channel?.sink.close(ws_status.normalClosure);
+    } catch (_) {}
     _channel = null;
     _pollTimer?.cancel();
     _pollTimer = null;

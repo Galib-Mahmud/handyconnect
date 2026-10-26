@@ -33,8 +33,14 @@ class JobProgressStep {
 class ActiveJobController extends GetxController {
   final ApiClient  _apiClient = ApiClient(baseUrl: ApiEndpoint.baseUrl);
   final ImagePicker _picker   = ImagePicker();
-  // Job ID comes from Get.arguments — set when acceptRequest() navigates
-  int get jobId => (Get.arguments?['jobId'] as int?) ?? 0;
+  int get jobId {
+    final args = Get.arguments as Map<String, dynamic>?;
+    return (args?['jobId'] as int?) ??
+        (args?['id'] as int?) ??
+        (args?['request_id'] as int?) ??
+        UserInfo.getRequestIdSync() ??
+        0;
+  }
 
   // ── My own full name — needed for chat "isSentByMe" logic ────────  ← ADD THIS
   String get myName => UserInfo.getFullNameSync() ?? '';
@@ -85,9 +91,53 @@ class ActiveJobController extends GetxController {
     super.onInit();
     final args = Get.arguments as Map<String, dynamic>? ?? {};
     _loadFromArgs(args);
+    if (jobId != 0) {
+      UserInfo.setRequestId(jobId);
+    }
     _rebuildSteps();
     if (jobStatusCode.value == 'ON_THE_WAY') {
       _startLiveLocationTracking();
+    }
+    fetchJobDetails();
+  }
+
+  Future<void> fetchJobDetails() async {
+    if (jobId == 0) return;
+    try {
+      final res = await _apiClient.get(
+        '${ApiEndpoint.requests}$jobId/',
+        requiresAuth: true,
+      ) as Map<String, dynamic>;
+
+      final cName = (res['customer_name'] as String?) ?? '';
+      if (cName.isNotEmpty) clientName.value = cName;
+      final addr = (res['address'] as String?) ?? '';
+      if (addr.isNotEmpty) clientAddress.value = addr;
+      final cPhoto = (res['customer_photo'] as String?) ?? '';
+      if (cPhoto.isNotEmpty) clientImage.value = cPhoto;
+      final sName = (res['service_name'] as String?) ?? '';
+      if (sName.isNotEmpty) serviceName.value = sName;
+      final sIcon = (res['service_icon'] as String?) ?? '';
+      if (sIcon.isNotEmpty) serviceIcon.value = sIcon;
+
+      final String code = ((res['status'] as String?) ?? jobStatusCode.value).toUpperCase();
+      final String disp = (res['status_display'] as String?) ?? jobStatus.value;
+      jobStatusCode.value = code;
+      jobStatus.value     = disp;
+
+      if (res['timeline'] != null) {
+        _applyTimeline(_asMap(res['timeline']));
+      }
+
+      _rebuildSteps();
+      if (code == 'ON_THE_WAY') {
+        _startLiveLocationTracking();
+      } else {
+        _stopLiveLocationTracking();
+      }
+      print('✅ [ACTIVE JOB] Synced server status=$code');
+    } catch (e) {
+      print('⚠️ [ACTIVE JOB] fetchJobDetails error: $e');
     }
   }
 
@@ -120,8 +170,8 @@ class ActiveJobController extends GetxController {
     estPriceMax.value = aiCost['max']?.toString() ?? '0';
     estCurrency.value = _str(aiCost['currency'], fallback: 'EUR');
 
-    jobStatusCode.value = _str(args['status'],         fallback: 'CONFIRMED');
-    jobStatus.value     = _str(args['status_display'], fallback: 'Confirmed');
+    jobStatusCode.value = _str(args['status'], fallback: 'ACCEPTED').toUpperCase();
+    jobStatus.value     = _str(args['status_display'], fallback: 'Accepted');
 
     _applyTimeline(_asMap(args['timeline']));
   }
@@ -139,6 +189,10 @@ class ActiveJobController extends GetxController {
   Future<void> markInProgress() async => await _advanceStatus('IN_PROGRESS');
 
   Future<void> _advanceStatus(String code) async {
+    if (jobId == 0) {
+      _showError('Job ID not found. Please re-open the job.');
+      return;
+    }
     isActionLoading.value = true;
     try {
       print('📤 [ADVANCE] id=$jobId status=$code');
@@ -149,7 +203,7 @@ class ActiveJobController extends GetxController {
       );
 
       // Server returns updated status + timeline
-      final newCode    = (res?['status']         as String?) ?? code;
+      final newCode    = ((res?['status'] as String?) ?? code).toUpperCase();
       final newDisplay = (res?['status_display'] as String?) ?? code;
       jobStatusCode.value = newCode;
       jobStatus.value     = newDisplay;
@@ -164,7 +218,19 @@ class ActiveJobController extends GetxController {
       }
       _rebuildSteps();
       print('✅ [ADVANCE] → $newCode');
+
+      Get.snackbar(
+        'Status Updated',
+        newDisplay,
+        backgroundColor: const Color(0xFF43A047),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(12),
+        borderRadius: 10,
+        duration: const Duration(seconds: 2),
+      );
     } on HttpException catch (e) {
+      print('❌ [ADVANCE] HttpException: ${e.message}');
       _showError(e.message);
     } catch (e) {
       print('❌ [ADVANCE] $e');
@@ -254,14 +320,17 @@ class ActiveJobController extends GetxController {
 
       print('✅ [BILL] Response: $res');
 
-      final newCode = (res?['status'] as String?) ?? 'COMPLETED';
+      final newCode = ((res?['status'] as String?) ?? 'COMPLETED').toUpperCase();
+      final msg = res?['message']?.toString() ?? 'Job marked as Completed.';
       jobStatusCode.value = newCode;
       jobStatus.value = 'Completed';
       _rebuildSteps();
 
+      await UserInfo.clearRequestId();
+
       Get.snackbar(
         'Done',
-        (res?['message'] as String?) ?? 'Job marked as Completed.',
+        msg,
         backgroundColor: const Color(0xFF43A047),
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
@@ -284,9 +353,11 @@ class ActiveJobController extends GetxController {
   // PRIMARY BUTTON TAP — routes to correct API based on current status
   // ─────────────────────────────────────────────────────────────────
   Future<void> onBottomButtonTap() async {
-    switch (jobStatusCode.value) {
+    final status = jobStatusCode.value.toUpperCase();
+    switch (status) {
       case 'PENDING':
       case 'CONFIRMED':
+      case 'ACCEPTED':
         await markOnTheWay();     // → POST advance-status ON_THE_WAY
         break;
       case 'ON_THE_WAY':
@@ -298,6 +369,10 @@ class ActiveJobController extends GetxController {
       case 'COMPLETED':
         await UserInfo.clearRequestId();
         Get.offAllNamed(RouteName.main1);
+        break;
+      default:
+        print('⚠️ [ACTIVE JOB] Unknown status: $status, attempting markOnTheWay');
+        await markOnTheWay();
         break;
     }
   }
@@ -343,30 +418,46 @@ class ActiveJobController extends GetxController {
   // BUTTON STATE (label / icon / color)
   // ─────────────────────────────────────────────────────────────────
   String get bottomButtonLabel {
-    switch (jobStatusCode.value) {
+    final status = jobStatusCode.value.toUpperCase();
+    switch (status) {
       case 'PENDING':
-      case 'CONFIRMED':   return "I'm On The Way";
-      case 'ON_THE_WAY':  return 'Start Job';
-      case 'IN_PROGRESS': return 'Submit Bill';
-      case 'COMPLETED':   return 'Back to Home';
-      default:            return 'Next Step';
+      case 'CONFIRMED':
+      case 'ACCEPTED':
+        return "I'm On The Way";
+      case 'ON_THE_WAY':
+        return 'Arrived & Start Job';
+      case 'IN_PROGRESS':
+        return 'Submit Bill & Complete';
+      case 'COMPLETED':
+        return 'Back to Home';
+      default:
+        return "I'm On The Way";
     }
   }
 
   IconData get bottomButtonIcon {
-    switch (jobStatusCode.value) {
+    final status = jobStatusCode.value.toUpperCase();
+    switch (status) {
       case 'PENDING':
-      case 'CONFIRMED':   return Icons.directions_car_outlined;
-      case 'ON_THE_WAY':  return Icons.build_outlined;
-      case 'IN_PROGRESS': return Icons.receipt_long_outlined;
-      case 'COMPLETED':   return Icons.home_outlined;
-      default:            return Icons.check_circle_outline;
+      case 'CONFIRMED':
+      case 'ACCEPTED':
+        return Icons.directions_car_outlined;
+      case 'ON_THE_WAY':
+        return Icons.build_outlined;
+      case 'IN_PROGRESS':
+        return Icons.receipt_long_outlined;
+      case 'COMPLETED':
+        return Icons.home_outlined;
+      default:
+        return Icons.directions_car_outlined;
     }
   }
 
   Color get bottomButtonColor {
-    if (jobStatusCode.value == 'IN_PROGRESS') return const Color(0xFF4CAF50);
-    return const Color(0xFFFFC107);
+    final status = jobStatusCode.value.toUpperCase();
+    if (status == 'IN_PROGRESS') return const Color(0xFF4CAF50);
+    if (status == 'COMPLETED') return const Color(0xFF1565C0);
+    return const Color(0xFFF8C106);
   }
 
   bool get showBeforeAfterCard =>
@@ -403,12 +494,14 @@ class ActiveJobController extends GetxController {
   }
 
   void _rebuildSteps() {
-    const order = ['CONFIRMED', 'ON_THE_WAY', 'IN_PROGRESS', 'COMPLETED'];
-    final code  = jobStatusCode.value == 'PENDING' ? 'CONFIRMED' : jobStatusCode.value;
+    const order = ['ACCEPTED', 'ON_THE_WAY', 'IN_PROGRESS', 'COMPLETED'];
+    String code = jobStatusCode.value.toUpperCase();
+    if (code == 'PENDING' || code == 'CONFIRMED') code = 'ACCEPTED';
     final curIdx = order.indexOf(code);
 
     JobProgressStatus stepStatus(String step) {
       final idx = order.indexOf(step);
+      if (curIdx < 0) return JobProgressStatus.pending;
       if (idx < curIdx) return JobProgressStatus.completed;
       if (idx == curIdx) return JobProgressStatus.active;
       return JobProgressStatus.pending;
@@ -418,7 +511,7 @@ class ActiveJobController extends GetxController {
       JobProgressStep(
         number: 1, label: 'Accepted',
         subtitle: timeRequestReceived.value != null ? _fmt(timeRequestReceived.value!) : null,
-        status: JobProgressStatus.completed,
+        status: curIdx >= 0 ? (curIdx == 0 ? JobProgressStatus.active : JobProgressStatus.completed) : JobProgressStatus.pending,
       ),
       JobProgressStep(
         number: 2, label: 'On The Way',

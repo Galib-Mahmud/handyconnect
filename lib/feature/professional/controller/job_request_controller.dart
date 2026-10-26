@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../../core/endpoint/api_client.dart';
 import '../../../core/endpoint/api_endpoint.dart';
+import '../../../core/local_storage/user_info.dart';
 import '../screen/active_job_screen.dart';
 import 'active_job_controller.dart';
 
@@ -11,6 +12,7 @@ import 'active_job_controller.dart';
 // ── Enum for Filter Types ──────────────────────────────────────────
 enum RequestFilterType {
   active,
+  completed,
   private,
   emergency,
   newRequest,
@@ -138,12 +140,14 @@ class JobRequestsController extends GetxController {
   final Rx<RequestFilterType> selectedFilter = RequestFilterType.active.obs;
 
   final RxList<ServiceRequestModel> activeRequests = <ServiceRequestModel>[].obs;
+  final RxList<ServiceRequestModel> completedRequests = <ServiceRequestModel>[].obs;
   final RxList<ServiceRequestModel> privateRequests = <ServiceRequestModel>[].obs;
   final RxList<ServiceRequestModel> emergencyRequests = <ServiceRequestModel>[].obs;
   final RxList<ServiceRequestModel> newRequests = <ServiceRequestModel>[].obs;
 
   final RxMap<String, String?> nextPages = {
     'active': null,
+    'completed': null,
     'private': null,
     'emergency': null,
     'new': null,
@@ -220,6 +224,8 @@ class JobRequestsController extends GetxController {
     switch (type) {
       case RequestFilterType.active:
         return ApiEndpoint.proActiveRequests;
+      case RequestFilterType.completed:
+        return '${ApiEndpoint.requests}?tab=completed';
       case RequestFilterType.private:
         return ApiEndpoint.proPrivateRequests;
       case RequestFilterType.emergency:
@@ -233,6 +239,8 @@ class JobRequestsController extends GetxController {
     switch (type) {
       case RequestFilterType.active:
         return 'active';
+      case RequestFilterType.completed:
+        return 'completed';
       case RequestFilterType.private:
         return 'private';
       case RequestFilterType.emergency:
@@ -246,7 +254,12 @@ class JobRequestsController extends GetxController {
       RequestFilterType type, List<ServiceRequestModel> data) {
     switch (type) {
       case RequestFilterType.active:
+        data.sort((a, b) => b.id.compareTo(a.id));
         activeRequests.assignAll(data);
+        break;
+      case RequestFilterType.completed:
+        data.sort((a, b) => b.id.compareTo(a.id));
+        completedRequests.assignAll(data);
         break;
       case RequestFilterType.private:
         privateRequests.assignAll(data);
@@ -264,6 +277,8 @@ class JobRequestsController extends GetxController {
     switch (selectedFilter.value) {
       case RequestFilterType.active:
         return activeRequests;
+      case RequestFilterType.completed:
+        return completedRequests;
       case RequestFilterType.private:
         return privateRequests;
       case RequestFilterType.emergency:
@@ -303,6 +318,7 @@ class JobRequestsController extends GetxController {
       );
 
       print('✅ [RESPOND] Success: $res');
+      await UserInfo.setRequestId(requestId);
 
       _navigateToActiveJob(requestData);
     } on HttpException catch (e) {
@@ -384,9 +400,19 @@ class JobRequestsController extends GetxController {
 
   // ── View active job (for already-active filter) ───────────────────
   void viewActiveJob(int requestId) {
-    final requestData = currentList.firstWhereOrNull((r) => r.id == requestId);
-    if (requestData == null) return;
-    _navigateToActiveJob(requestData);
+    UserInfo.setRequestId(requestId);
+    var requestData = currentList.firstWhereOrNull((r) => r.id == requestId);
+    requestData ??= activeRequests.firstWhereOrNull((r) => r.id == requestId);
+
+    if (requestData != null) {
+      _navigateToActiveJob(requestData);
+    } else {
+      if (Get.isRegistered<ActiveJobController>()) {
+        Get.delete<ActiveJobController>(force: true);
+      }
+      Get.put(ActiveJobController(), permanent: false);
+      Get.to(() => const ActiveJobScreen(), arguments: {'jobId': requestId});
+    }
   }
 
   // ── Static Helpers ────────────────────────────────────────────────

@@ -140,7 +140,7 @@ class _NewRequestAnalysisScreenState extends State<NewRequestAnalysisScreen> {
       print('📊 [AI RESULT] Polling /ai/result/$_requestId/...');
 
       final response = await _apiClient.get(
-        '${ApiEndpoint.aiResult}$_requestId/',
+        ApiEndpoint.aiResult(_requestId),
       );
 
       print('✅ [AI RESULT] $response');

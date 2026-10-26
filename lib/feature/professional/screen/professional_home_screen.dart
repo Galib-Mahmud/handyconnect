@@ -9,6 +9,8 @@ import '../../../core/local_storage/user_info.dart';
 import '../../chat/controller/chat_controller.dart';
 import '../../chat/screen/chat_screen.dart';
 import '../../customer/screen/notification_screen.dart';
+import '../controller/active_job_controller.dart';
+import '../controller/job_request_controller.dart';
 import '../controller/professional_home_controller.dart';
 import '../main_screen_1.dart';
 import 'active_job_screen.dart';
@@ -47,7 +49,13 @@ class ProfessionalHomeScreen extends StatelessWidget {
                   _buildOnlineToggle(c),
                   SizedBox(height: 12.h),
                   _buildStatsRow(c),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 16.h),
+
+                  // ── Ongoing Active Job Highlight Banner ──────────
+                  Obx(() {
+                    if (c.activeJobs.isEmpty) return const SizedBox.shrink();
+                    return _buildOngoingJobBanner(c.activeJobs.first, context, c);
+                  }),
 
                   // ── Active Jobs ──────────────────────────────────
                   Obx(() => _buildSectionHeader(
@@ -65,7 +73,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
                     }
                     return Column(
                       children: c.activeJobs
-                          .map((job) => _buildActiveJobCard(job, context))
+                          .map((job) => _buildActiveJobCard(job, context, c))
                           .toList(),
                     );
                   }),
@@ -140,6 +148,30 @@ class ProfessionalHomeScreen extends StatelessWidget {
                         padding: EdgeInsets.only(bottom: 12.h),
                         child: _buildJobRequestCard(r),
                       )),
+                    ],
+                  )
+                      : const SizedBox.shrink()),
+
+                  // ── Completed Jobs ───────────────────────────────
+                  Obx(() => c.completedJobs.isNotEmpty
+                      ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: 12.h),
+                      _buildSectionHeader(
+                        title: 'completed_jobs'.tr,
+                        badge: c.completedJobs.length.toString(),
+                        showViewAll: true,
+                        onViewAll: () {
+                          Get.offAll(() => const MainScreen1(
+                                initialIndex: 1,
+                                initialRequestFilter: RequestFilterType.completed,
+                              ));
+                        },
+                      ),
+                      SizedBox(height: 10.h),
+                      ...c.completedJobs
+                          .map((job) => _buildCompletedJobCard(job, context, c)),
                     ],
                   )
                       : const SizedBox.shrink()),
@@ -560,17 +592,242 @@ class ProfessionalHomeScreen extends StatelessWidget {
     );
   }
 
-  // ─────────────────── Active Job Card ───────────────────────────
-  Widget _buildActiveJobCard(Map<String, dynamic> job, BuildContext context) {
+  // ─────────────────── Ongoing Job Banner ─────────────────────────
+  Widget _buildOngoingJobBanner(
+      Map<String, dynamic> job, BuildContext context, ProfessionalHomeController c) {
     final assetPath =
-    ProfessionalHomeController.assetFromIcon(job['service_icon'] ?? '');
+        ProfessionalHomeController.assetFromIcon(job['service_icon'] ?? '');
     final clientName = job['customer_name'] ?? 'Customer';
     final address = job['address'] ?? '';
     final status = job['status_display'] ?? job['status'] ?? '';
+    final int jobId =
+        (job['id'] ?? job['request_id'] ?? job['request']) as int? ?? 0;
+
+    void openJob() {
+      final args = <String, dynamic>{
+        'jobId': jobId,
+        'customer_name': clientName,
+        'address': address,
+        'customer_photo': job['customer_photo'] ?? '',
+        'service_name': job['service_name'] ?? '',
+        'service_icon': job['service_icon'] ?? '',
+        'description': job['description'] ?? '',
+        'status': job['status'] ?? 'CONFIRMED',
+        'status_display': status,
+        'timeline': job['timeline'] ?? {},
+      };
+      if (Get.isRegistered<ActiveJobController>()) {
+        Get.delete<ActiveJobController>(force: true);
+      }
+      Get.put(ActiveJobController(), permanent: false);
+      Get.to(() => const ActiveJobScreen(), arguments: args)
+          ?.then((_) => c.fetchHomepage());
+    }
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 16.h),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18.r),
+          onTap: openJob,
+          child: Padding(
+            padding: EdgeInsets.all(16.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 10.w,
+                          height: 10.w,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF00E676),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'current_ongoing_job'.tr.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF00E676),
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 10.w, vertical: 4.h),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8C106).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                            color: const Color(0xFFF8C106), width: 1),
+                      ),
+                      child: Text(
+                        status,
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFF8C106),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12.h),
+                Row(
+                  children: [
+                    Container(
+                      width: 44.w,
+                      height: 44.w,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.all(8.w),
+                        child: Image.asset(assetPath, fit: BoxFit.contain),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            clientName,
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 3.h),
+                          Text(
+                            address,
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              color: Colors.white70,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 14.h),
+                SizedBox(
+                  width: double.infinity,
+                  height: 42.h,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF8C106),
+                      foregroundColor: const Color(0xFF212121),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                    onPressed: openJob,
+                    icon: Icon(Icons.play_arrow_rounded, size: 20.sp),
+                    label: Text(
+                      'manage_job_and_status'.tr,
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────── Active Job Card ───────────────────────────
+  Widget _buildActiveJobCard(
+      Map<String, dynamic> job, BuildContext context, ProfessionalHomeController c) {
+    final assetPath =
+        ProfessionalHomeController.assetFromIcon(job['service_icon'] ?? '');
+    final clientName = job['customer_name'] ?? 'Customer';
+    final address = job['address'] ?? '';
+    final status = job['status_display'] ?? job['status'] ?? '';
+    final rawStatus = (job['status'] as String? ?? '').toUpperCase();
+    final int jobId =
+        (job['id'] ?? job['request_id'] ?? job['request']) as int? ?? 0;
+
+    void openJob() {
+      final args = <String, dynamic>{
+        'jobId': jobId,
+        'customer_name': clientName,
+        'address': address,
+        'customer_photo': job['customer_photo'] ?? '',
+        'service_name': job['service_name'] ?? '',
+        'service_icon': job['service_icon'] ?? '',
+        'description': job['description'] ?? '',
+        'status': job['status'] ?? 'CONFIRMED',
+        'status_display': status,
+        'timeline': job['timeline'] ?? {},
+      };
+      if (Get.isRegistered<ActiveJobController>()) {
+        Get.delete<ActiveJobController>(force: true);
+      }
+      Get.put(ActiveJobController(), permanent: false);
+      Get.to(() => const ActiveJobScreen(), arguments: args)
+          ?.then((_) => c.fetchHomepage());
+    }
+
+    Color badgeBg = const Color(0xFFE3F2FD);
+    Color badgeTextColor = const Color(0xFF1565C0);
+    String nextStepHint = 'tap_to_manage'.tr;
+    String actionLabel = 'update_status'.tr;
+
+    if (rawStatus == 'ACCEPTED' || rawStatus == 'CONFIRMED') {
+      badgeBg = const Color(0xFFFFF8E1);
+      badgeTextColor = const Color(0xFFF57F17);
+      nextStepHint = 'Next: Start heading over to customer location';
+      actionLabel = 'Start Heading Over';
+    } else if (rawStatus == 'ON_THE_WAY') {
+      badgeBg = const Color(0xFFE8F5E9);
+      badgeTextColor = const Color(0xFF2E7D32);
+      nextStepHint = 'Next: Arrive at customer address & start job';
+      actionLabel = 'Arrived & Start Job';
+    } else if (rawStatus == 'IN_PROGRESS') {
+      badgeBg = const Color(0xFFEDE7F6);
+      badgeTextColor = const Color(0xFF512DA8);
+      nextStepHint = 'Next: Upload invoice & completion photos';
+      actionLabel = 'Submit Bill & Complete';
+    }
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
@@ -581,71 +838,247 @@ class ProfessionalHomeScreen extends StatelessWidget {
               offset: const Offset(0, 2)),
         ],
       ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Get.to(() => const ActiveJobScreen()),
-            child: Container(
-              width: 48.w,
-              height: 48.w,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF8E1),
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              child: Padding(
-                padding: EdgeInsets.all(8.w),
-                child: Image.asset(assetPath, fit: BoxFit.contain),
-              ),
-            ),
-          ),
-          SizedBox(width: 14.w),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => Get.to(() => const ActiveJobScreen()),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(clientName,
-                      style: TextStyle(
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF212121))),
-                  SizedBox(height: 4.h),
-                  Text(address,
-                      style: TextStyle(
-                          fontSize: 12.sp, color: const Color(0xFF9E9E9E))),
-                ],
-              ),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              GestureDetector(
-                onTap: () {},
-                child: Icon(Icons.flag_outlined,
-                    color: const Color(0xFF9E9E9E), size: 18.sp),
-              ),
-              SizedBox(height: 6.h),
-              Container(
-                padding:
-                EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE3F2FD),
-                  borderRadius: BorderRadius.circular(20.r),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16.r),
+          onTap: openJob,
+          child: Padding(
+            padding: EdgeInsets.all(14.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 48.w,
+                      height: 48.w,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF8E1),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.all(8.w),
+                        child: Image.asset(assetPath, fit: BoxFit.contain),
+                      ),
+                    ),
+                    SizedBox(width: 14.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(clientName,
+                              style: TextStyle(
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF212121))),
+                          SizedBox(height: 4.h),
+                          Text(address,
+                              style: TextStyle(
+                                  fontSize: 12.sp, color: const Color(0xFF9E9E9E))),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 10.w, vertical: 5.h),
+                      decoration: BoxDecoration(
+                        color: badgeBg,
+                        borderRadius: BorderRadius.circular(20.r),
+                      ),
+                      child: Text(
+                        status,
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w600,
+                          color: badgeTextColor,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1565C0),
+                SizedBox(height: 10.h),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 10.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9F9F9),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          size: 14.sp, color: const Color(0xFF757575)),
+                      SizedBox(width: 6.w),
+                      Expanded(
+                        child: Text(
+                          nextStepHint,
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            color: const Color(0xFF616161),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+                SizedBox(height: 10.h),
+                SizedBox(
+                  width: double.infinity,
+                  height: 38.h,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF8C106),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                    ),
+                    onPressed: openJob,
+                    icon: Icon(Icons.touch_app_outlined, size: 16.sp),
+                    label: Text(
+                      '${'manage_job'.tr} ($actionLabel)',
+                      style: TextStyle(
+                          fontSize: 12.sp, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────── Completed Job Card ─────────────────────────
+  Widget _buildCompletedJobCard(
+      Map<String, dynamic> job, BuildContext context, ProfessionalHomeController c) {
+    final assetPath =
+        ProfessionalHomeController.assetFromIcon(job['service_icon'] ?? '');
+    final clientName = job['customer_name'] ?? 'Customer';
+    final address = job['address'] ?? '';
+    final status = job['status_display'] ?? job['status'] ?? 'Completed';
+    final int jobId =
+        (job['id'] ?? job['request_id'] ?? job['request']) as int? ?? 0;
+
+    void openJob() {
+      final args = <String, dynamic>{
+        'jobId': jobId,
+        'customer_name': clientName,
+        'address': address,
+        'customer_photo': job['customer_photo'] ?? '',
+        'service_name': job['service_name'] ?? '',
+        'service_icon': job['service_icon'] ?? '',
+        'description': job['description'] ?? '',
+        'status': 'COMPLETED',
+        'status_display': status,
+        'timeline': job['timeline'] ?? {},
+      };
+      if (Get.isRegistered<ActiveJobController>()) {
+        Get.delete<ActiveJobController>(force: true);
+      }
+      Get.put(ActiveJobController(), permanent: false);
+      Get.to(() => const ActiveJobScreen(), arguments: args)
+          ?.then((_) => c.fetchHomepage());
+    }
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
         ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16.r),
+          onTap: openJob,
+          child: Padding(
+            padding: EdgeInsets.all(14.w),
+            child: Row(
+              children: [
+                Container(
+                  width: 46.w,
+                  height: 46.w,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(8.w),
+                    child: Image.asset(assetPath, fit: BoxFit.contain),
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              clientName,
+                              style: TextStyle(
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF212121)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 8.w, vertical: 3.h),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F5E9),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.check_circle,
+                                    size: 12.sp,
+                                    color: const Color(0xFF2E7D32)),
+                                SizedBox(width: 4.w),
+                                Text(
+                                  status,
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF2E7D32),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        address,
+                        style: TextStyle(
+                            fontSize: 12.sp, color: const Color(0xFF9E9E9E)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -663,8 +1096,12 @@ class ProfessionalHomeScreen extends StatelessWidget {
     final address = request['address'] ?? '';
     final isPriority = request['mark_as_priority'] ?? false;
 
-    return Stack(
-      children: [
+    return GestureDetector(
+      onTap: () {
+        Get.offAll(() => const MainScreen1(initialIndex: 1));
+      },
+      child: Stack(
+        children: [
         Container(
           padding: EdgeInsets.all(14.w),
           decoration: BoxDecoration(
@@ -845,6 +1282,7 @@ class ProfessionalHomeScreen extends StatelessWidget {
             ),
           ),
       ],
+    ),
     );
   }
 }

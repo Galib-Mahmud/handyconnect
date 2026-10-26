@@ -64,7 +64,10 @@ class LanguageController extends GetxController {
       try {
         await ApiClient(baseUrl: ApiEndpoint.baseUrl).patch(
           ApiEndpoint.authMe,
-          body: {'language': code},
+          body: {
+            'preferred_language': code,
+            'language': code,
+          },
           requiresAuth: true,
         );
         print('✅ [LANGUAGE] Synced language ($code) to backend /api/auth/me/');

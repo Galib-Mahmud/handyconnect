@@ -33,6 +33,7 @@ class ProfessionalHomeController extends GetxController {
 
   // ── Lists ─────────────────────────────────────────────────────────
   final RxList<Map<String, dynamic>> activeJobs        = <Map<String, dynamic>>[].obs;
+  final RxList<Map<String, dynamic>> completedJobs     = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> emergencyRequests = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> newRequests       = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> privateRequests   = <Map<String, dynamic>>[].obs;
@@ -105,15 +106,48 @@ class ProfessionalHomeController extends GetxController {
 
       // ── Request lists ─────────────────────────────────────────────
       // _normalizeRequest converts ai_cost Map → formatted String
-      activeJobs.value = _parseList(response['active_jobs']);
+      final parsedActive = _parseList(response['active_jobs']);
+      parsedActive.sort((a, b) {
+        final int idA = (a['id'] ?? a['request_id'] ?? a['request']) as int? ?? 0;
+        final int idB = (b['id'] ?? b['request_id'] ?? b['request']) as int? ?? 0;
+        return idB.compareTo(idA); // Newest accepted job at the top!
+      });
+      activeJobs.value = parsedActive;
+
       emergencyRequests.value = _parseList(response['emergency_requests']);
       newRequests.value = _parseList(response['new_requests']);
       privateRequests.value = _parseList(response['private_requests']);
 
-      print('🔧 Active Jobs        : ${activeJobs.length}');
-      print('🚨 Emergency Requests : ${emergencyRequests.length}');
-      print('🆕 New Requests       : ${newRequests.length}');
-      print('🔒 Private Requests   : ${privateRequests.length}');
+      if (activeJobs.isNotEmpty) {
+        final firstJob = activeJobs.first;
+        final int? firstId = (firstJob['id'] ?? firstJob['request_id'] ?? firstJob['request']) as int?;
+        if (firstId != null && firstId > 0) {
+          await UserInfo.setRequestId(firstId);
+        }
+      }
+
+      print('🔧 Active Jobs (Sorted): ${activeJobs.length}');
+      print('🚨 Emergency Requests  : ${emergencyRequests.length}');
+      print('🆕 New Requests        : ${newRequests.length}');
+      print('🔒 Private Requests    : ${privateRequests.length}');
+
+      // ── Completed Jobs (Separately loaded) ────────────────────────
+      try {
+        final compRes = await _apiClient.get('${ApiEndpoint.requests}?tab=completed');
+        final rawComp = compRes is Map && compRes['results'] is List
+            ? compRes['results'] as List
+            : (compRes is List ? compRes : []);
+        final parsedComp = _parseList(rawComp);
+        parsedComp.sort((a, b) {
+          final int idA = (a['id'] ?? a['request_id'] ?? a['request']) as int? ?? 0;
+          final int idB = (b['id'] ?? b['request_id'] ?? b['request']) as int? ?? 0;
+          return idB.compareTo(idA);
+        });
+        completedJobs.value = parsedComp;
+        print('🏁 Completed Jobs      : ${completedJobs.length}');
+      } catch (e) {
+        print('⚠️ [PRO HOME] Could not fetch completed jobs: $e');
+      }
 
     } on HttpException catch (e) {
       print('❌ [PRO HOME] HttpException: ${e.message}');

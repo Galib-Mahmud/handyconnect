@@ -1,4 +1,5 @@
 
+import 'package:VonAbisZ/feature/professional/controller/job_request_controller.dart';
 import 'package:VonAbisZ/feature/professional/screen/earning_screen.dart';
 import 'package:VonAbisZ/feature/professional/screen/job_request_screen.dart';
 import 'package:VonAbisZ/feature/professional/screen/professional_home_screen.dart';
@@ -8,9 +9,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 class MainScreen1 extends StatefulWidget {
-  const MainScreen1({super.key, this.initialIndex = 0});
+  const MainScreen1({
+    super.key,
+    this.initialIndex = 0,
+    this.initialRequestFilter,
+  });
 
   final int initialIndex;
+  final RequestFilterType? initialRequestFilter;
 
   @override
   State<MainScreen1> createState() => _MainScreen1State();
@@ -18,19 +24,19 @@ class MainScreen1 extends StatefulWidget {
 
 class _MainScreen1State extends State<MainScreen1> {
   int _currentIndex = 0;
+  late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _pages = [
+      const ProfessionalHomeScreen(),
+      JobRequestsScreen(initialFilter: widget.initialRequestFilter),
+      const EarningsScreen(),
+      const ProfessionalProfileScreen(),
+    ];
   }
-
-  final List<Widget> _pages = [
-    ProfessionalHomeScreen(),
-    JobRequestsScreen(),
-    EarningsScreen(),
-    ProfessionalProfileScreen(),
-  ];
 
   @override
   Widget build(BuildContext context) {

@@ -238,6 +238,13 @@ class AppTranslations extends Translations {
     'after_photo': 'After Photo',
     'bill_submitted_success': 'Bill submitted successfully!',
     'emergency': 'EMERGENCY',
+    'current_ongoing_job': 'Current Ongoing Job',
+    'completed_jobs': 'Completed Jobs',
+    'filter_completed': 'Completed',
+    'manage_job': 'Manage Job',
+    'update_status': 'Update Status',
+    'manage_job_and_status': 'Manage Job & Update Status',
+    'tap_to_manage': 'Tap to update status or navigate',
 
     // ── Professional Profile & Earnings ───────────────────────────
     'total_earnings': 'Total Earnings',
@@ -512,6 +519,13 @@ class AppTranslations extends Translations {
     'after_photo': 'Nachher-Foto',
     'bill_submitted_success': 'Rechnung erfolgreich eingereicht!',
     'emergency': 'NOTFALL',
+    'current_ongoing_job': 'Laufender aktiver Auftrag',
+    'completed_jobs': 'Abgeschlossene Aufträge',
+    'filter_completed': 'Abgeschlossen',
+    'manage_job': 'Auftrag verwalten',
+    'update_status': 'Status aktualisieren',
+    'manage_job_and_status': 'Auftrag verwalten & Status aktualisieren',
+    'tap_to_manage': 'Tippen, um Status zu aktualisieren',
 
     // ── Professional Profile & Earnings ───────────────────────────
     'total_earnings': 'Gesamteinnahmen',
