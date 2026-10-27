@@ -1,12 +1,12 @@
-// lib/feature/professional/screen/Onboardingpages/verifyidentity.dart
+// lib/feature/onboarding/screen/verify_identity_screen.dart
 
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import '../../../core/endpoint/api_endpoint.dart';
 import '../controller/onboarding_controller.dart';
 import 'onboarding_screen.dart';
-
 
 class Screen2VerifyIdentity extends StatelessWidget {
   final VoidCallback onNext;
@@ -37,30 +37,33 @@ class Screen2VerifyIdentity extends StatelessWidget {
 
           // Government ID
           Obx(() => _DocCard(
-            title: 'Government ID',
-            subtitle: "Driver's license, Passport, or National ID",
-            icon: Icons.badge_outlined,
-            file: c.governmentIdFile.value,
-            onChoose: c.pickGovernmentId,
-          )),
+                title: 'Government ID',
+                subtitle: "Driver's license, Passport, or National ID",
+                icon: Icons.badge_outlined,
+                file: c.governmentIdFile.value,
+                existingUrl: c.existingGovernmentIdUrl.value,
+                onChoose: c.pickGovernmentId,
+              )),
 
           // Professional Certificate
           Obx(() => _DocCard(
-            title: 'Professional Certificate',
-            subtitle: 'Trade licenses or relevant certifications',
-            icon: Icons.workspace_premium_outlined,
-            file: c.certificateFile.value,
-            onChoose: c.pickCertificate,
-          )),
+                title: 'Professional Certificate',
+                subtitle: 'Trade licenses or relevant certifications',
+                icon: Icons.workspace_premium_outlined,
+                file: c.certificateFile.value,
+                existingUrl: c.existingCertificateUrl.value,
+                onChoose: c.pickCertificate,
+              )),
 
           // Profile Photo
           Obx(() => _DocCard(
-            title: 'Profile Photo',
-            subtitle: 'Clear photo of your face for customers',
-            icon: Icons.person_outline,
-            file: c.profilePhotoFile.value,
-            onChoose: c.pickProfilePhoto,
-          )),
+                title: 'Profile Photo',
+                subtitle: 'Clear photo of your face for customers',
+                icon: Icons.person_outline,
+                file: c.profilePhotoFile.value,
+                existingUrl: c.existingProfilePhotoUrl.value,
+                onChoose: c.pickProfilePhoto,
+              )),
 
           const Spacer(),
 
@@ -97,7 +100,11 @@ class Screen2VerifyIdentity extends StatelessWidget {
           SizedBox(height: 16.h),
         ],
       ),
-      bottomButton: PrimaryButton(label: 'Continue Setup', onTap: onNext),
+      bottomButton: Obx(() => PrimaryButton(
+            label: 'Continue Setup',
+            isLoading: c.isUploadingDocs.value,
+            onTap: onNext,
+          )),
     );
   }
 }
@@ -108,6 +115,7 @@ class _DocCard extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final File? file;
+  final String? existingUrl;
   final VoidCallback onChoose;
 
   const _DocCard({
@@ -115,73 +123,124 @@ class _DocCard extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.file,
+    this.existingUrl,
     required this.onChoose,
   });
 
   @override
   Widget build(BuildContext context) {
-    final uploaded = file != null;
+    final bool hasLocalFile = file != null;
+    final bool hasRemoteFile = existingUrl != null && existingUrl!.isNotEmpty;
+    final bool uploaded = hasLocalFile || hasRemoteFile;
+
+    String displaySubtitle = subtitle;
+    if (hasLocalFile) {
+      displaySubtitle = file!.path.split('/').last;
+    } else if (hasRemoteFile) {
+      displaySubtitle = 'Document uploaded on file';
+    }
+
+    Widget leadingWidget;
+    if (hasLocalFile) {
+      leadingWidget = ClipRRect(
+        borderRadius: BorderRadius.circular(6.r),
+        child: Image.file(
+          file!,
+          width: 36.r,
+          height: 36.r,
+          fit: BoxFit.cover,
+        ),
+      );
+    } else if (hasRemoteFile) {
+      final fullUrl = ApiEndpoint.mediaUrl(existingUrl!);
+      leadingWidget = ClipRRect(
+        borderRadius: BorderRadius.circular(6.r),
+        child: Image.network(
+          fullUrl,
+          width: 36.r,
+          height: 36.r,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Icon(
+            Icons.verified_outlined,
+            color: const Color(0xFF43A047),
+            size: 28.r,
+          ),
+        ),
+      );
+    } else {
+      leadingWidget = Icon(icon, color: kTextGrey, size: 28.r);
+    }
+
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(14.r),
       decoration: BoxDecoration(
-        border: Border.all(color: uploaded ? kPrimary : kBorderGrey),
+        border: Border.all(
+          color: uploaded ? kPrimary : kBorderGrey,
+          width: uploaded ? 1.5.w : 1.w,
+        ),
         borderRadius: BorderRadius.circular(12.r),
         color: uploaded ? kPrimaryLight : Colors.white,
       ),
       child: Row(
         children: [
-          // Show thumbnail if it's an image, else icon
-          uploaded
-              ? ClipRRect(
-            borderRadius: BorderRadius.circular(6.r),
-            child: Image.file(
-              file!,
-              width: 36.r,
-              height: 36.r,
-              fit: BoxFit.cover,
-            ),
-          )
-              : Icon(icon, color: kTextGrey, size: 28.r),
+          leadingWidget,
           SizedBox(width: 12.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14.sp)),
                 Text(
-                  uploaded
-                      ? file!.path.split('/').last
-                      : subtitle,
+                  title,
                   style: TextStyle(
-                      fontSize: 12.sp,
-                      color: uploaded ? kPrimary : kTextGrey),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14.sp,
+                    color: kTextDark,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  displaySubtitle,
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: uploaded ? const Color(0xFF2E7D32) : kTextGrey,
+                    fontWeight: uploaded ? FontWeight.w500 : FontWeight.normal,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
+          SizedBox(width: 8.w),
           GestureDetector(
             onTap: onChoose,
-            child: Row(
-              children: [
-                Icon(
-                  uploaded ? Icons.check_circle : Icons.upload_outlined,
-                  color: kPrimary,
-                  size: 18.r,
-                ),
-                SizedBox(width: 4.w),
-                Text(
-                  uploaded ? 'Change' : 'Choose',
-                  style: TextStyle(
-                      color: kPrimary,
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w600),
-                ),
-              ],
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+              decoration: BoxDecoration(
+                color: uploaded ? Colors.white : kPrimary,
+                borderRadius: BorderRadius.circular(8.r),
+                border: uploaded ? Border.all(color: kPrimary) : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    uploaded ? Icons.refresh : Icons.upload_outlined,
+                    color: uploaded ? kPrimary : Colors.white,
+                    size: 16.r,
+                  ),
+                  SizedBox(width: 4.w),
+                  Text(
+                    uploaded ? 'Change' : 'Choose',
+                    style: TextStyle(
+                      color: uploaded ? kPrimary : Colors.white,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

@@ -76,13 +76,13 @@ class SignUpScreen extends StatelessWidget {
 
                 SizedBox(height: 16.h),
 
-                // Mobile Number TextField
-                CustomTextField(
-                  icon: Icons.phone_outlined,
-                  labelText: 'enter_phone_number'.tr,
-                  controller: c.phoneController,
-                  keyboardType: TextInputType.phone,
-                ),
+                // // Mobile Number TextField
+                // CustomTextField(
+                //   icon: Icons.phone_outlined,
+                //   labelText: 'enter_phone_number'.tr,
+                //   controller: c.phoneController,
+                //   keyboardType: TextInputType.phone,
+                // ),
 
                 SizedBox(height: 16.h),
 

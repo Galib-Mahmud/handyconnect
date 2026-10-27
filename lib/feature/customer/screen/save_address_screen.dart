@@ -116,11 +116,11 @@ class SavedAddressesScreen extends StatelessWidget {
   }
 
   Widget _buildAddressCard(
-    BuildContext context,
-    AddressController c,
-    AddressModel addr,
-    int number,
-  ) {
+      BuildContext context,
+      AddressController c,
+      AddressModel addr,
+      int number,
+      ) {
     return Container(
       margin: EdgeInsets.only(bottom: 16.h),
       padding: EdgeInsets.all(16.w),
@@ -242,10 +242,10 @@ class SavedAddressesScreen extends StatelessWidget {
   }
 
   void _showAddressFormDialog(
-    BuildContext context,
-    AddressController c, {
-    AddressModel? existing,
-  }) {
+      BuildContext context,
+      AddressController c, {
+        AddressModel? existing,
+      }) {
     final titleCtrl = TextEditingController(text: existing?.title ?? 'Home');
     final buildingCtrl = TextEditingController(text: existing?.building ?? '');
     final streetCtrl = TextEditingController(text: existing?.streetAddress ?? '');
@@ -255,96 +255,125 @@ class SavedAddressesScreen extends StatelessWidget {
     final countryCtrl = TextEditingController(text: existing?.country ?? 'Germany');
 
     Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                existing == null ? 'Add Address' : 'Edit Address',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF212121)),
-              ),
-              const SizedBox(height: 16),
-              _buildField(titleCtrl, 'Label / Title (e.g. Home, Office)'),
-              const SizedBox(height: 10),
-              _buildField(buildingCtrl, 'Building / Apartment'),
-              const SizedBox(height: 10),
-              _buildField(streetCtrl, 'Street Address *'),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(child: _buildField(cityCtrl, 'City')),
-                  const SizedBox(width: 10),
-                  Expanded(child: _buildField(stateCtrl, 'State')),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(child: _buildField(zipCtrl, 'Zip Code')),
-                  const SizedBox(width: 10),
-                  Expanded(child: _buildField(countryCtrl, 'Country')),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      // Loading cholar shomoy bairer tap-e dialog close hobe na
+      barrierDismissible: false,
+      PopScope(
+        // Loading cholar shomoy back button-o block
+        canPop: !c.isSaving.value,
+        child: Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  existing == null ? 'Add Address' : 'Edit Address',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF212121)),
+                ),
+                const SizedBox(height: 16),
+                _buildField(titleCtrl, 'Label / Title (e.g. Home, Office)'),
+                const SizedBox(height: 10),
+                _buildField(buildingCtrl, 'Building / Apartment'),
+                const SizedBox(height: 10),
+                _buildField(streetCtrl, 'Street Address *'),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: _buildField(cityCtrl, 'City')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _buildField(stateCtrl, 'State')),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: _buildField(zipCtrl, 'Zip Code')),
+                    const SizedBox(width: 10),
+                    Expanded(child: _buildField(countryCtrl, 'Country')),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Obx(
+                            () => OutlinedButton(
+                          onPressed: c.isSaving.value ? null : () => Get.back(),
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('Cancel'),
+                        ),
                       ),
-                      child: const Text('Cancel'),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        if (streetCtrl.text.trim().isEmpty) {
-                          Get.snackbar('Required', 'Street address is required.');
-                          return;
-                        }
-                        bool ok = false;
-                        if (existing == null) {
-                          ok = await c.addAddress(
-                            title: titleCtrl.text,
-                            building: buildingCtrl.text,
-                            streetAddress: streetCtrl.text,
-                            city: cityCtrl.text,
-                            state: stateCtrl.text,
-                            zipCode: zipCtrl.text,
-                            country: countryCtrl.text,
-                          );
-                        } else {
-                          ok = await c.updateAddress(
-                            id: existing.id,
-                            title: titleCtrl.text,
-                            building: buildingCtrl.text,
-                            streetAddress: streetCtrl.text,
-                            city: cityCtrl.text,
-                            state: stateCtrl.text,
-                            zipCode: zipCtrl.text,
-                            country: countryCtrl.text,
-                          );
-                        }
-                        if (ok) Get.back();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF8C106),
-                        foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Obx(
+                            () => ElevatedButton(
+                          onPressed: c.isSaving.value
+                              ? null
+                              : () async {
+                            if (streetCtrl.text.trim().isEmpty) {
+                              Get.snackbar('Required', 'Street address is required.');
+                              return;
+                            }
+                            bool ok = false;
+                            if (existing == null) {
+                              ok = await c.addAddress(
+                                title: titleCtrl.text,
+                                building: buildingCtrl.text,
+                                streetAddress: streetCtrl.text,
+                                city: cityCtrl.text,
+                                state: stateCtrl.text,
+                                zipCode: zipCtrl.text,
+                                country: countryCtrl.text,
+                              );
+                            } else {
+                              ok = await c.updateAddress(
+                                id: existing.id,
+                                title: titleCtrl.text,
+                                building: buildingCtrl.text,
+                                streetAddress: streetCtrl.text,
+                                city: cityCtrl.text,
+                                state: stateCtrl.text,
+                                zipCode: zipCtrl.text,
+                                country: countryCtrl.text,
+                              );
+                            }
+                            // API success hole-i dialog close hobe.
+                            // Get.back() na, karon controller-er snackbar khola thakle
+                            // Get.back() dialog-er bodole snackbar close kore.
+                            if (ok) Navigator.of(context).pop();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF8C106),
+                            foregroundColor: Colors.black,
+                            disabledBackgroundColor: const Color(0xFFF8C106).withValues(alpha: 0.6),
+                            disabledForegroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: c.isSaving.value
+                              ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.black,
+                            ),
+                          )
+                              : Text(
+                            existing == null ? 'Save' : 'Update',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
                       ),
-                      child: Text(existing == null ? 'Save' : 'Update', style: const TextStyle(fontWeight: FontWeight.w700)),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

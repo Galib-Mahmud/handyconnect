@@ -1,11 +1,11 @@
-// lib/feature/professional/controllers/onboarding_controller.dart
+// lib/feature/onboarding/controller/onboarding_controller.dart
 
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import 'package:dio/dio.dart';
 import 'package:geolocator/geolocator.dart';
-
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/endpoint/api_client.dart';
@@ -19,6 +19,74 @@ class OnboardingController extends GetxController {
 
   final ApiClient _apiClient = ApiClient(baseUrl: ApiEndpoint.baseUrl);
   final ImagePicker _picker = ImagePicker();
+
+  // ─────────────────────────────────────────────────────────────────
+  // PROFILE & EXISTING DATA
+  // ─────────────────────────────────────────────────────────────────
+  final Rx<String?> existingGovernmentIdUrl = Rx<String?>(null);
+  final Rx<String?> existingCertificateUrl = Rx<String?>(null);
+  final Rx<String?> existingProfilePhotoUrl = Rx<String?>(null);
+  final Rx<double?> profileLat = Rx<double?>(null);
+  final Rx<double?> profileLng = Rx<double?>(null);
+  final RxString currentOnboardingStatus = ''.obs;
+  final RxBool isLoadingInitialData = false.obs;
+
+  Future<void> fetchOnboardingData() async {
+    try {
+      isLoadingInitialData.value = true;
+      print('📋 [ONBOARDING] Fetching current onboarding profile...');
+      final response = await _apiClient.get(ApiEndpoint.providerOnboarding);
+      if (response != null && response is Map<String, dynamic>) {
+        print('✅ [ONBOARDING] Current profile: $response');
+        if (response['business_address'] != null &&
+            response['business_address'].toString().isNotEmpty) {
+          businessAddressController.text =
+              response['business_address'].toString();
+        }
+        if (response['government_id'] != null) {
+          existingGovernmentIdUrl.value = response['government_id'].toString();
+        }
+        if (response['professional_certificate'] != null) {
+          existingCertificateUrl.value =
+              response['professional_certificate'].toString();
+        }
+        if (response['profile_photo'] != null) {
+          existingProfilePhotoUrl.value = response['profile_photo'].toString();
+        }
+        if (response['service_radius'] != null) {
+          serviceRadius.value = (response['service_radius'] as num).toDouble();
+        }
+        if (response['lat'] != null) {
+          profileLat.value = (response['lat'] as num).toDouble();
+        }
+        if (response['lng'] != null) {
+          profileLng.value = (response['lng'] as num).toDouble();
+        }
+        if (response['services'] is List) {
+          final list = response['services'] as List;
+          for (var item in list) {
+            if (item is int) {
+              selectedServiceIds.add(item);
+            } else if (item is Map && item['id'] != null) {
+              selectedServiceIds.add(item['id'] as int);
+            } else if (item is String) {
+              final parsed = int.tryParse(item);
+              if (parsed != null) selectedServiceIds.add(parsed);
+            }
+          }
+        }
+        if (response['onboarding_status'] != null) {
+          currentOnboardingStatus.value =
+              response['onboarding_status'].toString();
+          await UserInfo.setOnboardingStatus(currentOnboardingStatus.value);
+        }
+      }
+    } catch (e) {
+      print('⚠️ [ONBOARDING] Could not fetch current onboarding profile: $e');
+    } finally {
+      isLoadingInitialData.value = false;
+    }
+  }
 
   // ─────────────────────────────────────────────────────────────────
   // SCREEN 3 — Services fetched from API
@@ -36,7 +104,11 @@ class OnboardingController extends GetxController {
       isLoadingServices.value = true;
       print('📋 [SERVICES] Fetching...');
       final response = await _apiClient.get(ApiEndpoint.servicesList);
-      final List<dynamic> list = response is List ? response : [];
+      final List<dynamic> list = response is List
+          ? response
+          : (response is Map && response['results'] is List
+              ? response['results'] as List
+              : []);
       availableServices.value = list
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
@@ -62,6 +134,7 @@ class OnboardingController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    fetchOnboardingData();
     fetchServices();
   }
 
@@ -71,19 +144,30 @@ class OnboardingController extends GetxController {
   final Rx<File?> governmentIdFile = Rx<File?>(null);
   final Rx<File?> certificateFile = Rx<File?>(null);
   final Rx<File?> profilePhotoFile = Rx<File?>(null);
+  final RxBool isUploadingDocs = false.obs;
+
+  bool get hasGovernmentId =>
+      governmentIdFile.value != null ||
+      (existingGovernmentIdUrl.value?.isNotEmpty ?? false);
+
+  bool get hasCertificate =>
+      certificateFile.value != null ||
+      (existingCertificateUrl.value?.isNotEmpty ?? false);
+
+  bool get hasProfilePhoto =>
+      profilePhotoFile.value != null ||
+      (existingProfilePhotoUrl.value?.isNotEmpty ?? false);
 
   int get uploadedCount {
     int count = 0;
-    if (governmentIdFile.value != null) count++;
-    if (certificateFile.value != null) count++;
-    if (profilePhotoFile.value != null) count++;
+    if (hasGovernmentId) count++;
+    if (hasCertificate) count++;
+    if (hasProfilePhoto) count++;
     return count;
   }
 
   bool validateDocuments() {
-    if (governmentIdFile.value == null ||
-        certificateFile.value == null ||
-        profilePhotoFile.value == null) {
+    if (!hasGovernmentId || !hasCertificate || !hasProfilePhoto) {
       _showError('Please upload all three documents before continuing.');
       return false;
     }
@@ -108,58 +192,120 @@ class OnboardingController extends GetxController {
     if (xfile != null) profilePhotoFile.value = File(xfile.path);
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // GPS — request permission + get location
-  // ─────────────────────────────────────────────────────────────────
-  Future<Position?> _getLocation() async {
-    // 1. Check service enabled
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      _showError('Please enable location services and try again.');
-      await Geolocator.openLocationSettings(); // opens device location settings
-      return null;
+  /// Saves any newly picked identity documents to backend during Step 2
+  Future<bool> saveIdentityDocuments() async {
+    if (!validateDocuments()) return false;
+
+    // If no newly selected files, existing files on backend are sufficient
+    if (governmentIdFile.value == null &&
+        certificateFile.value == null &&
+        profilePhotoFile.value == null) {
+      return true;
     }
 
-    // 2. Check / request permission
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission(); // shows system dialog
-      if (permission == LocationPermission.denied) {
-        _showError('Location permission is required to continue.');
-        return null;
-      }
-    }
+    isUploadingDocs.value = true;
+    try {
+      final token = await UserInfo.getAccessToken();
+      final dio = Dio();
+      dio.options.headers = {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      };
 
-    if (permission == LocationPermission.deniedForever) {
-      _showError('Please enable location in app settings.');
-      await Geolocator.openAppSettings();
-      return null;
-    }
-
-    // 3. Get position — retry once on timeout
-    for (int attempt = 1; attempt <= 2; attempt++) {
-      try {
-        print('📍 [GPS] Attempt $attempt...');
-        final pos = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-          timeLimit: const Duration(seconds: 30),
+      final Map<String, dynamic> filesMap = {};
+      if (governmentIdFile.value != null) {
+        filesMap['government_id'] = await MultipartFile.fromFile(
+          governmentIdFile.value!.path,
         );
-        print('✅ [GPS] Got location: ${pos.latitude}, ${pos.longitude}');
-        return pos;
-      } catch (e) {
-        print('⚠️ [GPS] Attempt $attempt failed: $e');
-        if (attempt == 2) {
-          _showError('Could not get location. Check GPS and try again.');
-          return null;
-        }
-        await Future.delayed(const Duration(seconds: 2));
       }
+      if (certificateFile.value != null) {
+        filesMap['professional_certificate'] = await MultipartFile.fromFile(
+          certificateFile.value!.path,
+        );
+      }
+      if (profilePhotoFile.value != null) {
+        filesMap['profile_photo'] = await MultipartFile.fromFile(
+          profilePhotoFile.value!.path,
+        );
+      }
+
+      final formData = FormData.fromMap(filesMap);
+      final url = ApiEndpoint.baseUrl + ApiEndpoint.providerOnboarding;
+      print('📤 [ONBOARDING] Uploading documents to $url...');
+      final response = await dio.patch(url, data: formData);
+      print('✅ [ONBOARDING] Documents uploaded: ${response.data}');
+
+      if (response.data is Map<String, dynamic>) {
+        final data = response.data as Map<String, dynamic>;
+        if (data['government_id'] != null) {
+          existingGovernmentIdUrl.value = data['government_id'].toString();
+        }
+        if (data['professional_certificate'] != null) {
+          existingCertificateUrl.value =
+              data['professional_certificate'].toString();
+        }
+        if (data['profile_photo'] != null) {
+          existingProfilePhotoUrl.value = data['profile_photo'].toString();
+        }
+      }
+      return true;
+    } on DioException catch (e) {
+      final msg = _parseDioError(e);
+      print('❌ [ONBOARDING] Document upload error: $msg');
+      _showError(msg);
+      return false;
+    } catch (e) {
+      print('❌ [ONBOARDING] Document upload error: $e');
+      _showError('Failed to upload documents. Please try again.');
+      return false;
+    } finally {
+      isUploadingDocs.value = false;
     }
-    return null;
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // SUBMIT — PATCH /pro/onboarding/  (multipart via dio)
+  // GPS — fast check with fallback
+  // ─────────────────────────────────────────────────────────────────
+  Future<Position?> _getLocation() async {
+    try {
+      // 1. Fast check: last known position first
+      final lastPos = await Geolocator.getLastKnownPosition();
+      if (lastPos != null) {
+        print(
+            '✅ [GPS] Got last known location: ${lastPos.latitude}, ${lastPos.longitude}');
+        return lastPos;
+      }
+
+      // 2. Check service & permission
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return null;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied ||
+            permission == LocationPermission.deniedForever) {
+          return null;
+        }
+      }
+
+      // 3. Quick getCurrentPosition with 5s timeout
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 5),
+      );
+      print('✅ [GPS] Got current location: ${pos.latitude}, ${pos.longitude}');
+      return pos;
+    } catch (e) {
+      print('⚠️ [GPS] Could not get position: $e');
+      return null;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // SUBMIT — PATCH /pro/onboarding/ + POST /pro/onboarding/submit-for-review/
   // ─────────────────────────────────────────────────────────────────
   final RxBool isLoading = false.obs;
 
@@ -170,94 +316,84 @@ class OnboardingController extends GetxController {
       return;
     }
     if (selectedServiceIds.isEmpty) {
-      _showError('Please select at least one service.');
+      _showError('Please select at least one service category.');
       return;
     }
-    if (governmentIdFile.value == null ||
-        certificateFile.value == null ||
-        profilePhotoFile.value == null) {
-      _showError('Please upload all three documents.');
+    if (!validateDocuments()) {
       return;
     }
 
     isLoading.value = true;
     try {
-      // ── Location ──────────────────────────────────────────────
+      // ── Location with fallback ────────────────────────────────
       final pos = await _getLocation();
-      if (pos == null) return;
+      final double lat = pos?.latitude ?? (profileLat.value ?? 52.5200);
+      final double lng = pos?.longitude ?? (profileLng.value ?? 13.4050);
 
       print('📤 [ONBOARDING] Submitting...');
       print('   services : ${selectedServiceIds.toList()}');
-      print('   lat      : ${pos.latitude}');
-      print('   lng      : ${pos.longitude}');
+      print('   lat      : $lat');
+      print('   lng      : $lng');
       print('   radius   : ${serviceRadius.value.toInt()} km');
 
-      // ── Build URL (plain string concatenation — no interpolation bug) ──
       final String url = ApiEndpoint.baseUrl + ApiEndpoint.providerOnboarding;
-      print('🌐 [ONBOARDING] URL: $url');
-
-      // ── Auth token ────────────────────────────────────────────
       final String? token = await UserInfo.getAccessToken();
 
-      // ── Dio instance ──────────────────────────────────────────
       final dio = Dio();
-      dio.options.headers = {'Authorization': 'Bearer $token'};
+      dio.options.headers = {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      };
 
-      // ── FormData — dio sends List as repeated keys ────────────
-      // services: [4, 5]  →  services=4&services=5 (Django reads as list)
-      final formData = FormData.fromMap({
+      // FormData map: JSON-encode services to cleanly match backend serializer
+      final Map<String, dynamic> dataMap = {
         'business_address': businessAddressController.text.trim(),
         'service_radius': serviceRadius.value.toInt(),
-        'lat': pos.latitude.toString(),
-        'lng': pos.longitude.toString(),
-        'services': selectedServiceIds.toList(),
-      });
+        'lat': lat,
+        'lng': lng,
+        'services': jsonEncode(selectedServiceIds.toList()),
+      };
 
-      // ── Attach files ──────────────────────────────────────────
-      formData.files.addAll([
-        MapEntry(
-          'government_id',
-          await MultipartFile.fromFile(governmentIdFile.value!.path),
-        ),
-        MapEntry(
-          'professional_certificate',
-          await MultipartFile.fromFile(certificateFile.value!.path),
-        ),
-        MapEntry(
-          'profile_photo',
-          await MultipartFile.fromFile(profilePhotoFile.value!.path),
-        ),
-      ]);
+      // Attach any files that haven't been uploaded yet
+      if (governmentIdFile.value != null) {
+        dataMap['government_id'] = await MultipartFile.fromFile(
+          governmentIdFile.value!.path,
+        );
+      }
+      if (certificateFile.value != null) {
+        dataMap['professional_certificate'] = await MultipartFile.fromFile(
+          certificateFile.value!.path,
+        );
+      }
+      if (profilePhotoFile.value != null) {
+        dataMap['profile_photo'] = await MultipartFile.fromFile(
+          profilePhotoFile.value!.path,
+        );
+      }
 
-      // ── PATCH request (profile & details) ───────────────────────
+      final formData = FormData.fromMap(dataMap);
+
+      // ── 1. PATCH request (profile & details) ───────────────────
       final dioResponse = await dio.patch(url, data: formData);
       final response = dioResponse.data;
-
       print('✅ [ONBOARDING] Details saved: $response');
 
-      // ── POST submit-for-review (HC-019 canonical review request) ──
+      // ── 2. POST submit-for-review ─────────────────────────────
       final submitUrl = ApiEndpoint.baseUrl + ApiEndpoint.submitForReview;
       print('🌐 [ONBOARDING] Submitting for review: $submitUrl');
       final submitResponse = await dio.post(submitUrl);
-      print(
-        '✅ [ONBOARDING] Submit for review response: ${submitResponse.data}',
-      );
+      print('✅ [ONBOARDING] Submit for review response: ${submitResponse.data}');
 
-      if (submitResponse.data != null) {
-        final status =
-            submitResponse.data['onboarding_status']?.toString() ??
-            'UNDER_REVIEW';
-        await UserInfo.setOnboardingStatus(status);
-      } else if (response != null) {
-        final status =
-            response['onboarding_status']?.toString() ?? 'UNDER_REVIEW';
-        await UserInfo.setOnboardingStatus(status);
-      }
+      final String status =
+          submitResponse.data?['onboarding_status']?.toString() ??
+              response?['onboarding_status']?.toString() ??
+              'UNDER_REVIEW';
 
+      await UserInfo.setOnboardingStatus(status);
+      currentOnboardingStatus.value = status;
       _onboardingSubmitSuccess.value = true;
     } on DioException catch (e) {
-      final msg =
-          e.response?.data?.toString() ?? e.message ?? 'Request failed.';
+      final msg = _parseDioError(e);
       print('❌ [ONBOARDING] DioException: $msg');
       _showError(msg);
     } catch (e) {
@@ -281,11 +417,14 @@ class OnboardingController extends GetxController {
   // ─────────────────────────────────────────────────────────────────
   Future<String?> checkOnboardingStatus() async {
     try {
-      final response = await _apiClient.get(ApiEndpoint.providerOnboardingStatus);
+      final response =
+          await _apiClient.get(ApiEndpoint.providerOnboardingStatus);
       if (response != null && response is Map<String, dynamic>) {
-        final status = response['onboarding_status']?.toString() ?? response['status']?.toString();
+        final status = response['onboarding_status']?.toString() ??
+            response['status']?.toString();
         if (status != null) {
           await UserInfo.setOnboardingStatus(status);
+          currentOnboardingStatus.value = status;
           if (status == 'APPROVED') {
             Get.offAllNamed(RouteName.main1);
           }
@@ -305,31 +444,57 @@ class OnboardingController extends GetxController {
   }
 
   // ─────────────────────────────────────────────────────────────────
+  // ERROR PARSER
+  // ─────────────────────────────────────────────────────────────────
+  String _parseDioError(DioException e) {
+    if (e.response?.data != null) {
+      final data = e.response!.data;
+      if (data is Map) {
+        final List<String> parts = [];
+        data.forEach((k, v) {
+          final field = k.toString().replaceAll('_', ' ');
+          if (v is List) {
+            parts.add('$field: ${v.join(", ")}');
+          } else if (v is Map) {
+            parts.add('$field: ${v.values.join(", ")}');
+          } else {
+            parts.add('$field: $v');
+          }
+        });
+        if (parts.isNotEmpty) return parts.join('\n');
+      } else if (data is String && data.isNotEmpty) {
+        return data;
+      }
+    }
+    return e.message ?? 'Request failed. Please check your connection.';
+  }
+
+  // ─────────────────────────────────────────────────────────────────
   // Snackbars
   // ─────────────────────────────────────────────────────────────────
   void _showError(String message) => Get.snackbar(
-    'Error',
-    message,
-    snackPosition: SnackPosition.TOP,
-    backgroundColor: Colors.red.shade700,
-    colorText: Colors.white,
-    icon: const Icon(Icons.error_outline, color: Colors.white),
-    margin: const EdgeInsets.all(12),
-    borderRadius: 10,
-    duration: const Duration(seconds: 5),
-  );
+        'Error',
+        message,
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.shade700,
+        colorText: Colors.white,
+        icon: const Icon(Icons.error_outline, color: Colors.white),
+        margin: const EdgeInsets.all(12),
+        borderRadius: 10,
+        duration: const Duration(seconds: 5),
+      );
 
   void _showSuccess(String message) => Get.snackbar(
-    'Success',
-    message,
-    snackPosition: SnackPosition.TOP,
-    backgroundColor: Colors.green.shade700,
-    colorText: Colors.white,
-    icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-    margin: const EdgeInsets.all(12),
-    borderRadius: 10,
-    duration: const Duration(seconds: 4),
-  );
+        'Success',
+        message,
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green.shade700,
+        colorText: Colors.white,
+        icon: const Icon(Icons.check_circle_outline, color: Colors.white),
+        margin: const EdgeInsets.all(12),
+        borderRadius: 10,
+        duration: const Duration(seconds: 4),
+      );
 
   @override
   void onClose() {

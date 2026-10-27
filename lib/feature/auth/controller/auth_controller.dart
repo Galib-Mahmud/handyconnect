@@ -33,7 +33,6 @@ class AuthController extends GetxController {
   // ─── SignUp Controllers ───────────────────────────────────────────
   final fullNameController = TextEditingController();
   final signUpEmailController = TextEditingController();
-  final phoneController = TextEditingController();
   final signUpPasswordController = TextEditingController();
   final signUpRePasswordController = TextEditingController();
 
@@ -134,7 +133,6 @@ class AuthController extends GetxController {
   Future<void> register() async {
     if (fullNameController.text.trim().isEmpty ||
         signUpEmailController.text.trim().isEmpty ||
-        phoneController.text.trim().isEmpty ||
         signUpPasswordController.text.isEmpty ||
         signUpRePasswordController.text.isEmpty) {
       _showError('Please fill all required fields');
@@ -156,7 +154,6 @@ class AuthController extends GetxController {
         body: {
           'full_name': fullNameController.text.trim(),
           'email': signUpEmailController.text.trim(),
-          'phone_number': phoneController.text.trim(),
           'password': signUpPasswordController.text.trim(),
           're_password': signUpRePasswordController.text.trim(),
           'role': selectedRole.value,

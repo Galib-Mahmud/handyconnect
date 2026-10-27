@@ -30,6 +30,24 @@ class _OnboardingState extends State<Onboarding> {
     super.initState();
     _c = OnboardingController.to;
     _c.resetSubmitSuccess();
+    _c.fetchOnboardingData().then((_) {
+      if (!mounted) return;
+      if (_c.currentOnboardingStatus.value == 'UNDER_REVIEW') {
+        _jumpToStep(3);
+      } else if (_c.currentOnboardingStatus.value == 'SERVICES_PENDING') {
+        _jumpToStep(2);
+      }
+    });
+  }
+
+  void _jumpToStep(int step) {
+    if (_pageController.hasClients) {
+      _pageController.jumpToPage(step);
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pageController.hasClients) _pageController.jumpToPage(step);
+      });
+    }
   }
 
   @override
@@ -56,9 +74,9 @@ class _OnboardingState extends State<Onboarding> {
     }
   }
 
-  // Step 4 button → Subscription screen
+  // Step 4 button → Sign In / Application review message
   void _goToSubscription() {
-    Get.toNamed(RouteName.signin);
+    _c.goToSignInAfterOnboarding();
   }
 
   @override
@@ -75,8 +93,11 @@ class _OnboardingState extends State<Onboarding> {
 
           // Step 2: Verify Identity (Document Upload)
           Screen2VerifyIdentity(
-            onNext: () {
-              if (_c.validateDocuments()) _nextStep();
+            onNext: () async {
+              if (_c.validateDocuments()) {
+                final success = await _c.saveIdentityDocuments();
+                if (success) _nextStep();
+              }
             },
           ),
 
@@ -91,7 +112,7 @@ class _OnboardingState extends State<Onboarding> {
             },
           ),
 
-          // Step 4: Application Submitted → goes to Subscription
+          // Step 4: Application Submitted
           Screen4ApplicationSubmitted(onHome: _goToSubscription),
         ],
       ),
